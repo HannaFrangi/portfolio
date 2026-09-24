@@ -38,7 +38,7 @@ export const featured: Project = {
   href: "https://robostarslb.com/",
   hrefLabel: "robostarslb.com",
   device: "tablet",
-  screen: "/textures/robostars-desktop.jpg",
+  screen: "/textures/robostars-site.jpg",
 };
 
 export const works: Project[] = [
@@ -52,7 +52,7 @@ export const works: Project[] = [
     href: "https://smscleaninglb.com/",
     hrefLabel: "smscleaninglb.com",
     device: "phones",
-    screen: "/textures/sms-cleaning-mobile.jpg",
+    screen: "/textures/sms-cleaning-phone.jpg",
   },
   {
     id: "homeroots",
@@ -64,7 +64,7 @@ export const works: Project[] = [
     href: "http://homerootsinteriors.co/",
     hrefLabel: "homerootsinteriors.co",
     device: "laptop",
-    screen: "/textures/homeroots-desktop.jpg",
+    screen: "/textures/homeroots-site.jpg",
   },
   {
     id: "reevu",

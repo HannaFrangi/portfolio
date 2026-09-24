@@ -24,12 +24,34 @@ export const motion = {
   reduced: typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches,
 };
 
+export const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
+export const easeOut = (v: number) => 1 - (1 - v) ** 3;
+export const easeInOut = (v: number) => (v < 0.5 ? 4 * v * v * v : 1 - (-2 * v + 2) ** 3 / 2);
+/** Overshoots then settles: the "pop" for blobs arriving. */
+export const easeOutBack = (v: number) => 1 + 2.70158 * (v - 1) ** 3 + 1.70158 * (v - 1) ** 2;
+
+/** Pinned sections pin from the md breakpoint up; phones scroll them normally. */
+export const pinsActive = () => typeof window !== "undefined" && window.innerWidth >= 768;
+
 /** 0 when the element's top enters the bottom of the viewport, 1 when its bottom leaves the top. */
-export function scrollProgress(el: HTMLElement | null) {
+export function scrollProgress(el: Element | null) {
   if (!el) return 0;
   const r = el.getBoundingClientRect();
   const vh = window.innerHeight;
-  return Math.min(1, Math.max(0, (vh - r.top) / (vh + r.height)));
+  return clamp01((vh - r.top) / (vh + r.height));
+}
+
+/** Progress through a pinned (sticky) section: 0 as it pins, 1 as it releases. */
+export function pinProgress(el: Element | null) {
+  if (!el) return 0;
+  const r = el.getBoundingClientRect();
+  const span = r.height - window.innerHeight;
+  return span <= 0 ? scrollProgress(el) : clamp01(-r.top / span);
+}
+
+/** A section's own timeline: pinned progress on desktop, pass-through progress on phones. */
+export function sectionProgress(el: Element | null) {
+  return pinsActive() ? pinProgress(el) : scrollProgress(el);
 }
 
 // Seeded so every visitor sees the same shapes.
