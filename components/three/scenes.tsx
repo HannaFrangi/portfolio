@@ -26,6 +26,22 @@ const span = (p: number, a: number, b: number) => clamp01((p - a) / (b - a));
 
 /* ------------------------------------------------------------------ hero */
 
+/** Vertical fade for the bottom of the portrait (alphaMap reads the green channel). */
+const portraitFade = (() => {
+  if (typeof document === "undefined") return null;
+  const data = new Uint8Array(4 * 64);
+  for (let i = 0; i < 64; i++) {
+    const v = Math.round(255 * Math.min(1, Math.max(0, (i / 63 - 0.1) / 0.28)));
+    data.set([v, v, v, 255], i * 4);
+  }
+  const t = new THREE.DataTexture(data, 1, 64);
+  // DataTextures default to nearest sampling, which shows as bands in a gradient.
+  t.magFilter = THREE.LinearFilter;
+  t.minFilter = THREE.LinearFilter;
+  t.needsUpdate = true;
+  return t;
+})();
+
 function Portrait() {
   const texture = useTexture("/textures/portrait.png", (t) => {
     (t as THREE.Texture).colorSpace = THREE.SRGBColorSpace;
@@ -35,8 +51,10 @@ function Portrait() {
   return (
     <mesh position={[0, -0.95, 0]}>
       <planeGeometry args={[(h * img.width) / img.height, h]} />
-      {/* alphaTest so the empty pixels around the cut-out never hide the orbit ring */}
-      <meshBasicMaterial map={texture} transparent alphaTest={0.4} toneMapped={false} />
+      {/* The bottom fades into the page like the landscape behind it, instead of ending
+          in a hard line where the hero's 3D box is clipped. A low alphaTest still drops
+          the empty pixels around the cut-out so they never hide the orbit ring. */}
+      <meshBasicMaterial map={texture} alphaMap={portraitFade} transparent alphaTest={0.02} toneMapped={false} />
     </mesh>
   );
 }
@@ -72,11 +90,10 @@ function HeroScene() {
       g.scale.set(damp(g.scale.x, s, dt, 8), damp(g.scale.y, s, dt, 8), 1);
     }
     if (mid.current && !motion.reduced) mid.current.rotation.y = damp(mid.current.rotation.y, pointer.sx * 0.08, dt);
-    // The camera leans in as the visitor leaves the hero.
-    if (root.current) {
-      root.current.scale.setScalar(Math.min(1, (size.width / size.height) * 0.9 + 0.2));
-      root.current.position.z = damp(root.current.position.z, out * 1.6, dt, 8);
-    }
+    // The blobs lean in toward the camera as the visitor leaves; the portrait holds its
+    // size so its faded bottom never crosses the edge of the hero's 3D box.
+    if (root.current) root.current.scale.setScalar(Math.min(1, (size.width / size.height) * 0.9 + 0.2));
+    for (const g of [back.current, front.current]) if (g) g.position.z = damp(g.position.z, out * 1.6, dt, 8);
   });
 
   // Blobs keep to the edges so the title band stays clear; the portrait sits low so the

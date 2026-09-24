@@ -1,4 +1,5 @@
 import { Fragment } from "react";
+import Image from "next/image";
 import Reveal from "@/components/Reveal";
 import ScrollDriver from "@/components/ScrollDriver";
 import StageMount from "@/components/StageMount";
@@ -14,6 +15,8 @@ import {
   toolkit,
   works,
 } from "@/lib/content";
+import aboutPaper from "./media/about-paper.jpg";
+import heroPlate from "./media/hero-plate.jpg";
 
 const jsonLd = {
   "@context": "https://schema.org",
@@ -95,7 +98,21 @@ function Nav() {
 
 function Hero() {
   return (
-    <section id="top" aria-labelledby="hero-title" className="relative h-[100svh] min-h-[640px] overflow-hidden">
+    <section
+      id="top"
+      data-progress="leave"
+      aria-labelledby="hero-title"
+      className="relative isolate h-[100svh] min-h-[640px] overflow-hidden"
+    >
+      {/* Far plane: generated space-age landscape. It sits under the headline, which sits
+          under the WebGL portrait and blobs: landscape, type, subject, foreground. */}
+      <div aria-hidden className="plate absolute inset-0 -z-10">
+        <div className="plate-drift absolute inset-[-6%]">
+          <Image src={heroPlate} alt="" fill preload placeholder="blur" sizes="100vw" className="object-cover object-[50%_62%]" />
+        </div>
+      </div>
+      {/* Outside the moving plate, so the hero always melts into the page below. */}
+      <div aria-hidden className="absolute inset-x-0 bottom-0 -z-10 h-1/3 bg-gradient-to-b from-transparent to-mist" />
       <div className="absolute inset-x-0 top-[11vh] px-4 text-center max-md:top-[12vh]">
         <p className="intro-pill pill pill-soft mx-auto !text-xs uppercase tracking-[0.2em] text-olive">
           <span className="relative size-2 rounded-full bg-accent dot-pulse" aria-hidden />
@@ -122,10 +139,12 @@ function Hero() {
 
       <div className="intro-late absolute bottom-10 left-6 hidden max-w-[16rem] md:block lg:left-12">
         <p className="pill pill-soft !text-[0.8rem] text-olive">Web · Mobile · Admin dashboards</p>
-        <p className="mt-4 text-sm leading-6 text-ink-soft">2+ years building production apps for real clients.</p>
+        <p className="pill-soft mt-3 rounded-2xl px-4 py-3 text-sm leading-6 text-ink-soft">
+          2+ years building production apps for real clients.
+        </p>
       </div>
       <div className="intro-late absolute bottom-10 right-6 hidden max-w-[19rem] text-right md:block lg:right-12">
-        <p className="text-[0.95rem] leading-6 text-ink-soft">
+        <p className="pill-soft rounded-2xl px-4 py-3 text-[0.95rem] leading-6 text-ink-soft">
           I build web apps, mobile apps and the admin dashboards that run them, from the first requirement to
           deployment.
         </p>
@@ -326,21 +345,18 @@ function Process() {
   );
 }
 
-/** Paper-cut layers: each wave drifts at its own depth as the section passes. */
-function Waves() {
-  const layers = [
-    ["M0 120 C 200 40, 380 200, 600 120 S 1000 20, 1200 110 V700 H0Z", "#66704A", 30],
-    ["M0 250 C 240 170, 420 330, 640 240 S 1020 160, 1200 250 V700 H0Z", "#738B54", 60],
-    ["M0 400 C 260 330, 460 470, 700 390 S 1040 320, 1200 400 V700 H0Z", "#809A5E", 95],
-    ["M0 520 C 300 470, 520 580, 760 510 S 1080 460, 1200 520 V700 H0Z", "#959D69", 130],
-  ] as const;
+/**
+ * Generated paper-cut landscape. As the section passes, the camera drifts across it
+ * (scroll-driven zoom and pan) and a band of window light slides over the paper.
+ */
+function PaperBackdrop() {
   return (
-    <svg aria-hidden viewBox="0 0 1200 600" preserveAspectRatio="xMidYMid slice" className="absolute inset-0 h-full w-full">
-      <rect width="1200" height="600" fill="#595F3E" />
-      {layers.map(([d, fill, depth]) => (
-        <path key={fill} d={d} fill={fill} className="wave" style={{ ["--depth" as string]: `${depth}px` }} />
-      ))}
-    </svg>
+    <div aria-hidden className="absolute inset-0 overflow-hidden">
+      <div className="paper absolute inset-[-8%]">
+        <Image src={aboutPaper} alt="" fill placeholder="blur" sizes="(min-width: 1152px) 1152px, 100vw" className="object-cover" />
+      </div>
+      <div className="light-sweep absolute inset-0" />
+    </div>
   );
 }
 
@@ -357,9 +373,10 @@ function About() {
         {...reveal(0)}
         className="relative mx-auto max-w-6xl overflow-hidden rounded-[40px] text-paper shadow-[0_40px_80px_-40px_rgb(89_95_62/0.8)]"
       >
-        <Waves />
-        <div className="relative grid gap-10 p-8 md:p-14 lg:grid-cols-2">
-          <div>
+        <PaperBackdrop />
+        {/* Frosted olive panels behind the copy only: the paper stays visible around them. */}
+        <div className="relative grid gap-6 p-5 md:gap-8 md:p-12 lg:grid-cols-2">
+          <div className="about-panel self-start">
             <p className="font-serif text-xl italic text-paper/80">/ Who I am /</p>
             <h2 id="about-title" className="mt-3 font-display text-[clamp(2.2rem,4.6vw,3.6rem)] font-bold leading-[1.02] tracking-[-0.03em]">
               Developer by day, robotics teacher on the side.
@@ -370,7 +387,7 @@ function About() {
               Science.
             </p>
           </div>
-          <div className="space-y-8">
+          <div className="about-panel space-y-8">
             <div>
               <h3 className="font-mono text-xs uppercase tracking-[0.2em] text-paper/70">Experience</h3>
               <ul className="mt-3 divide-y divide-paper/20 border-y border-paper/20">

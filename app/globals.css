@@ -160,9 +160,30 @@ body::after {
   opacity: 0.8;
 }
 
-/* About: paper-cut waves drift at their own depth. */
-.wave {
-  transform: translateY(calc((var(--p, 0.5) - 0.5) * var(--depth)));
+/* Hero far plane: sinks and swells as the hero scrolls away, and slides against the cursor. */
+.plate {
+  transform: translate3d(calc(var(--mx, 0) * -18px), calc(var(--p, 0) * 22vh + var(--my, 0) * -10px), 0)
+    scale(calc(1 + var(--p, 0) * 0.12));
+  transform-origin: 50% 70%;
+}
+
+/* About: the camera drifts across the paper as the section passes. */
+.paper {
+  transform: translate3d(calc((var(--p, 0.5) - 0.5) * -6%), calc((var(--p, 0.5) - 0.5) * 8%), 0)
+    scale(calc(1.02 + var(--p, 0.5) * 0.1));
+}
+
+/* Scrim only where copy sits: frosted olive panels over the paper. */
+.about-panel {
+  border-radius: 28px;
+  padding: 1.75rem;
+  background: rgb(58 64 38 / 0.62);
+  border: 1px solid rgb(245 242 234 / 0.14);
+  backdrop-filter: blur(14px) saturate(1.1);
+  box-shadow: 0 24px 48px -30px rgb(20 26 10 / 0.7);
+}
+@media (min-width: 768px) {
+  .about-panel { padding: 2.25rem; }
 }
 
 .marquee-mask {
@@ -192,6 +213,18 @@ body::after {
 
   .marquee {
     animation: drift 38s linear infinite;
+  }
+
+  /* The landscape breathes: a slow push-in and drift, never still. */
+  .plate-drift {
+    animation: breathe 26s ease-in-out infinite alternate;
+  }
+
+  /* Window light slides across the paper-cut hills. */
+  .light-sweep {
+    background: linear-gradient(105deg, transparent 30%, rgb(255 236 200 / 0.28) 45%, transparent 60%);
+    mix-blend-mode: soft-light;
+    animation: sweep 9s ease-in-out infinite;
   }
   .marquee-mask:hover .marquee {
     animation-play-state: paused;
@@ -248,6 +281,16 @@ body::after {
 @keyframes wipe {
   from { clip-path: inset(0 100% 0 0); }
   to { clip-path: inset(0 0 0 0); }
+}
+
+@keyframes breathe {
+  from { transform: scale(1) translate3d(0, 0, 0); }
+  to { transform: scale(1.07) translate3d(-1.5%, -1%, 0); }
+}
+
+@keyframes sweep {
+  0%, 100% { transform: translateX(-60%); }
+  50% { transform: translateX(60%); }
 }
 
 @keyframes drift {
