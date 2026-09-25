@@ -2,6 +2,7 @@
 
 import { useRef, useState, type KeyboardEvent } from "react";
 import type { Project } from "@/lib/content";
+import { Arrow } from "./icons";
 import { MemoryIcon } from "./three/scenes";
 
 /**
@@ -60,8 +61,10 @@ export default function MemoryCard({ works }: { works: Project[] }) {
         {/* Detail panel: what the PS2 shows under the icons for the highlighted save. */}
         <div aria-live="polite" className="memory-detail mx-3 mb-3 mt-4 grid gap-4 rounded-[26px] p-6 md:mx-10 md:mb-10 md:grid-cols-[1fr_auto] md:items-end md:p-8">
           <div>
-            <p className="font-mono text-[0.7rem] uppercase tracking-[0.2em] text-ink-soft">{current.kind}</p>
-            <h3 className="mt-1 font-display text-3xl font-bold tracking-[-0.01em] md:text-4xl">{current.name}</h3>
+            <h3 className="font-display text-3xl font-bold tracking-[-0.01em] md:text-4xl">{current.name}</h3>
+            <p className="mt-1 text-sm text-ink-soft">
+              {current.kind} · <span className="font-medium text-olive">{current.role}</span>
+            </p>
             <p className="mt-3 max-w-xl leading-7 text-ink-soft">{current.summary}</p>
             <div className="mt-4 flex flex-wrap gap-2">
               {current.stack.map((s) => (
@@ -73,10 +76,10 @@ export default function MemoryCard({ works }: { works: Project[] }) {
           </div>
           {current.href ? (
             <a href={current.href} target="_blank" rel="noopener noreferrer" className="pill pill-solid self-start md:self-end">
-              Load {current.hrefLabel} ↗
+              Load {current.hrefLabel} <Arrow />
             </a>
           ) : (
-            <span className="font-mono text-xs uppercase tracking-[0.18em] text-ink-soft">Private SaaS · no public link</span>
+            <span className="text-sm text-ink-soft">Private SaaS, no public link</span>
           )}
         </div>
       </div>

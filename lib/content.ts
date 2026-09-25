@@ -1,4 +1,6 @@
 export const person = {
+  email: "hannafrangi.hf@gmail.com",
+  cv: "/HannaAlFrangi-CV.pdf",
   name: "Hanna Al Frangi",
   first: "Hanna",
   role: "React & React Native Developer",
@@ -15,6 +17,8 @@ export type Project = {
   kind: string;
   summary: string;
   points: string[];
+  /** What Hanna owned. The résumé lists these client projects as solo builds. */
+  role: string;
   stack: string[];
   href?: string;
   hrefLabel?: string;
@@ -35,6 +39,7 @@ export const featured: Project = {
     "Role-based access control with granular permissions across every user type.",
   ],
   stack: ["Next.js", "React", "RBAC", "SEO"],
+  role: "Solo project: landing page and admin dashboard",
   href: "https://robostarslb.com/",
   hrefLabel: "robostarslb.com",
   device: "tablet",
@@ -48,6 +53,7 @@ export const works: Project[] = [
     kind: "Service company website",
     summary: "Built for phones first: fast to load, easy to find, with clear calls to action.",
     points: [],
+    role: "Solo project",
     stack: ["React", "Vite", "SEO"],
     href: "https://smscleaninglb.com/",
     hrefLabel: "smscleaninglb.com",
@@ -60,6 +66,7 @@ export const works: Project[] = [
     kind: "Interior design landing page",
     summary: "A visual landing page, with image optimization so the portfolio loads as well as it looks.",
     points: [],
+    role: "Solo project",
     stack: ["Next.js", "Image optimization"],
     href: "http://homerootsinteriors.co/",
     hrefLabel: "homerootsinteriors.co",
@@ -72,13 +79,18 @@ export const works: Project[] = [
     kind: "Restaurant review SaaS",
     summary:
       "Two fully separate dashboards: review management and analytics for each restaurant, plus a super admin panel for listings and moderation.",
-    points: [],
+    points: [
+      "Business panel: review management, customer insights and performance analytics for each restaurant.",
+      "Super admin panel: platform-wide oversight, restaurant listings and content moderation.",
+    ],
+    role: "Solo project: both dashboards",
     stack: ["React", "Analytics", "Multi-role"],
     device: "tablet",
     screen: "reevu",
   },
 ];
 
+/** Employer and clients: labelled on the page as "Clients and teams", since TheBooker is an employer. */
 export const clients = ["TheBooker", "RoboStars", "SMS Cleaning", "HomeRoots Interior", "Reevu"];
 
 export const process = [
@@ -112,10 +124,11 @@ export const education = [
 
 export const certificates = ["CCNA: Introduction to Networks", "CCNA: Routing and Switching", "IT Essentials", "Network Security"];
 
+/** Each group names where it was actually used, from the résumé. */
 export const toolkit = [
-  { group: "Frontend", items: ["React.js", "Next.js", "Vite", "JavaScript (ES6+)", "HTML5", "CSS3"] },
-  { group: "Mobile", items: ["React Native"] },
-  { group: "Product", items: ["Admin dashboards", "CRUD interfaces", "Role-based UI", "Responsive design"] },
-  { group: "Quality", items: ["On-page SEO", "Lighthouse", "Performance", "Cross-browser"] },
-  { group: "Shipping", items: ["Git", "GitHub", "Production builds"] },
+  { group: "Frontend", items: ["React.js", "Next.js", "Vite", "JavaScript (ES6+)", "HTML5", "CSS3"], usedIn: "RoboStars, HomeRoots, SMS Cleaning, Reevu" },
+  { group: "Mobile", items: ["React Native"], usedIn: "TheBooker" },
+  { group: "Product", items: ["Admin dashboards", "CRUD interfaces", "Role-based UI", "Responsive design"], usedIn: "RoboStars admin, Reevu, TheBooker" },
+  { group: "Quality", items: ["On-page SEO", "Lighthouse", "Performance", "Cross-browser"], usedIn: "SMS Cleaning, HomeRoots, RoboStars" },
+  { group: "Shipping", items: ["Git", "GitHub", "Production builds"], usedIn: "every project" },
 ];

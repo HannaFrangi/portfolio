@@ -1,6 +1,7 @@
 "use client";
 
-import { Suspense, useEffect, useRef, type RefObject } from "react";
+import { Suspense, useEffect, useMemo, useRef, type RefObject } from "react";
+import type { ThreeEvent } from "@react-three/fiber";
 import * as THREE from "three";
 import { useFrame, useThree } from "@react-three/fiber";
 import { PerspectiveCamera, useTexture, View } from "@react-three/drei";
@@ -20,9 +21,9 @@ import {
 import {
   Blob,
   Car,
-  Donut,
   Laptop,
   LogoBadge,
+  logoParts,
   Orbit,
   Phone,
   Pod,
@@ -64,7 +65,7 @@ function Portrait() {
   const img = texture.image as { width: number; height: number };
   const h = 4.5;
   return (
-    <mesh position={[0, -0.95, 0]}>
+    <mesh position={[0, -1.5, 0]}>
       <planeGeometry args={[(h * img.width) / img.height, h]} />
       {/* The bottom fades into the page like the landscape behind it, instead of ending
           in a hard line where the hero's 3D box is clipped. A low alphaTest still drops
@@ -135,21 +136,19 @@ function HeroScene() {
     for (const g of [back.current, front.current]) if (g) g.position.z = damp(g.position.z, out * 1.6, dt, 8);
   });
 
-  // Blobs keep to the edges so the title band stays clear; the portrait sits low so the
-  // italic line runs behind the shoulders. `delay` staggers the pop-in on load.
+  // Distilled: one blob per side, the orbit ring and the car. The portrait sits below the
+  // title so the full job title reads; blobs keep clear of the title band and the side cards.
   return (
     <group ref={root}>
       <group ref={back}>
-        <Blob seed={1} position={[-3.35, -0.35, -2.4]} scale={0.72} color={palette.moss} delay={0.35} />
-        <Blob seed={2} position={[3.45, -0.55, -2.8]} scale={0.85} color={palette.sage} amount={0.28} delay={0.5} />
-        <Sphere position={[-2.45, -1.75, -1.4]} scale={0.34} color={palette.cream} delay={0.7} />
-        <Donut position={[-3.5, 1.05, -2.6]} rotation={[1.1, 0.3, 0.4]} scale={0.24} color={palette.sand} delay={0.8} />
+        <Blob seed={1} position={[-3.6, -0.55, -2.4]} scale={0.68} color={palette.moss} delay={0.35} />
+        <Blob seed={2} position={[3.7, -0.2, -2.8]} scale={0.72} color={palette.sage} amount={0.28} delay={0.5} />
       </group>
       <group ref={mid}>
         <Suspense fallback={null}>
           <Portrait />
         </Suspense>
-        <Orbit radius={1.9} position={[0, 0.35, 0]} tilt={[1.3, 0.06, 0.3]} speed={0.35} delay={0.9} />
+        <Orbit radius={1.9} position={[0, -0.3, 0]} tilt={[1.3, 0.06, 0.3]} speed={0.35} delay={0.9} />
       </group>
       <group ref={pod} scale={0.32}>
         <Pod />
@@ -159,12 +158,7 @@ function HeroScene() {
       </group>
       <group ref={front}>
         {/* covers the photo's own crop on the right arm */}
-        <Blob seed={3} position={[1.65, -2.15, 1.2]} scale={0.56} color={palette.sage} delay={0.55} />
-        <Blob seed={4} position={[-1.5, -2.25, 1.3]} scale={0.38} color={palette.moss} delay={0.65} />
-        <Sphere position={[-2.95, 0.35, 1.2]} scale={0.17} color={palette.cream} delay={1} />
-        <Sphere position={[2.95, 0.5, 1]} scale={0.15} finish="chrome" delay={1.1} />
-        <Orbit radius={0.4} position={[-3.15, 1.45, 0.3]} tilt={[1.1, 0.2, -0.4]} planetSize={0.05} speed={0.8} planet={palette.moss} delay={1.2} />
-        <Sphere position={[-3.15, 1.45, 0.3]} scale={0.16} color={palette.accent} delay={1.15} />
+        <Blob seed={3} position={[1.65, -2.6, 1.2]} scale={0.56} color={palette.sage} delay={0.55} />
       </group>
     </group>
   );
@@ -195,6 +189,17 @@ function FeaturedScene({ spot, screen }: { spot: RefObject<HTMLElement | null>; 
     const p = progress.current;
     const t = motion.reduced ? 0 : state.clock.elapsedTime;
 
+    // The view bleeds past its grid column (so props are never sliced mid-page); shift the
+    // camera by half the uneven bleed so the composition stays centred on the column.
+    const el = spot.current;
+    const col = el?.parentElement;
+    if (el && col) {
+      const a = el.getBoundingClientRect();
+      const b = col.getBoundingClientRect();
+      const worldPerPx = (2 * 8 * Math.tan(THREE.MathUtils.degToRad(15))) / Math.max(1, a.height);
+      state.camera.position.x = ((a.right - b.right - (b.left - a.left)) / 2) * worldPerPx;
+    }
+
     const turn = easeOut(span(p, 0, 0.18));
     const settle = easeInOut(span(p, 0.85, 1));
     const g = tablet.current;
@@ -210,7 +215,7 @@ function FeaturedScene({ spot, screen }: { spot: RefObject<HTMLElement | null>; 
     drive.current.waving = easeOut(span(p, 0.55, 0.65));
     const r = robot.current;
     if (r) {
-      r.position.x = lerp(4.6, 1.15, walk);
+      r.position.x = lerp(7.5, 1.15, walk);
       r.rotation.y = walk < 1 ? -1.2 : damp(r.rotation.y, -0.45, dt, 4);
     }
     if (orbit.current) orbit.current.scale.setScalar(Math.max(0.001, easeOut(span(p, 0.08, 0.3))));
@@ -223,7 +228,7 @@ function FeaturedScene({ spot, screen }: { spot: RefObject<HTMLElement | null>; 
       {/* The client's logo assembles itself as the tablet swings round, then floats top-left. */}
       <LogoBadge assemble={() => span(progress.current, 0.03, 0.24)} position={[1.3, 0.85, 0.9]} scale={1.05} />
       <Blob seed={7} position={[2.3, 0.4, -2.4]} scale={0.95} color={palette.sage} />
-      <Blob seed={8} position={[-2.3, -1.6, 0.4]} scale={0.45} color={palette.moss} />
+      <Blob seed={8} position={[-1.7, -1.75, 0.4]} scale={0.42} color={palette.moss} />
       <group ref={tablet}>
         <Suspense fallback={null}>
           <Tablet src={screen} scroll={scroll} />
@@ -232,7 +237,7 @@ function FeaturedScene({ spot, screen }: { spot: RefObject<HTMLElement | null>; 
       <group ref={orbit}>
         <Orbit radius={2.35} position={[-0.3, 0.25, 0]} tilt={[1.35, 0, -0.25]} speed={0.2} phase={2} />
       </group>
-      <group ref={robot} position={[4.6, -2.05, 1]} rotation-y={-1.2} scale={0.56}>
+      <group ref={robot} position={[7.5, -2.05, 1]} rotation-y={-1.2} scale={0.56}>
         <Robot drive={drive} />
       </group>
     </>
@@ -498,7 +503,17 @@ function BuddyScene() {
     d.waving = damp(d.waving, now < s.waveUntil ? 1 : 0, dt, 6);
     // Waits below the screen during the hero (so it never covers the call to action),
     // then pops up once the visitor scrolls on.
-    s.show = damp(s.show, window.scrollY > window.innerHeight * 0.6 ? 1 : 0, dt, 5);
+    // ...and ducks out over the pinned showcase, the works, About and the game, where it
+    // would sit on top of text or a second robot.
+    const mid = window.innerHeight / 2;
+    const busy = ["work", "works", "about", "build"].some((id) => {
+      const r = document.getElementById(id)?.getBoundingClientRect();
+      return !!r && r.height > 0 && r.top <= mid && r.bottom >= mid;
+    });
+    // Phones have no free corner, so there it only comes out for the ending.
+    const closing = document.getElementById("closing")?.getBoundingClientRect();
+    const narrowOk = window.innerWidth >= 768 || (!!closing && closing.top < window.innerHeight * 0.7);
+    s.show = damp(s.show, window.scrollY > window.innerHeight * 0.6 && !busy && narrowOk ? 1 : 0, dt, 5);
     const k = (now - s.hopAt) / 450;
     if (hop.current)
       hop.current.position.y = -1.55 - (1 - s.show) * 4 + (k >= 0 && k < 1 ? Math.sin(Math.PI * k) * 0.45 : 0);
@@ -507,6 +522,201 @@ function BuddyScene() {
   return (
     <group ref={hop} position={[0, -5.5, 0]} rotation-y={-0.35}>
       <Robot drive={drive} />
+    </group>
+  );
+}
+
+/* ------------------------------------------------------ build-a-robot game */
+
+export type BuilderCommand = { type: "scatter" | "build"; n: number };
+
+const SNAP = 0.2; // how close (badge units) a piece must land to click into place
+
+/**
+ * The RoboStars logo in pieces on a table. Drag each piece onto its outline; within
+ * SNAP it clicks home. All six placed: a victory spin and a sparkle burst.
+ */
+function BuilderScene({
+  command,
+  interactive,
+  onProgress,
+}: {
+  command: BuilderCommand;
+  interactive: boolean;
+  onProgress: (placed: number) => void;
+}) {
+  const parts = useMemo(() => logoParts(), []);
+  const board = useRef<THREE.Group>(null);
+  const meshes = useRef<(THREE.Mesh | null)[]>([]);
+  const sparkles = useRef<THREE.Group>(null);
+  const size = useThree((s) => s.size);
+  const game = useRef({
+    pos: parts.map(() => new THREE.Vector3()),
+    rot: parts.map(() => 0),
+    placed: parts.map(() => false),
+    dragging: -1,
+    grab: new THREE.Vector3(),
+    won: -10,
+    reported: -1,
+  });
+  const scratch = useMemo(() => ({ plane: new THREE.Plane(new THREE.Vector3(0, 0, 1), 0), hit: new THREE.Vector3() }), []);
+
+  // Scatter across the table, away from the outline in the middle.
+  const scatter = () => {
+    const g = game.current;
+    const half = Math.max(1, (size.width / size.height) * 1.1 - 0.3);
+    parts.forEach((_, i) => {
+      const side = i % 2 === 0 ? -1 : 1;
+      g.pos[i].set(side * (0.6 + Math.random() * (half - 0.6)), (Math.random() - 0.5) * 0.9, 0);
+      g.rot[i] = (Math.random() - 0.5) * 1.6;
+      g.placed[i] = false;
+    });
+    g.won = -10;
+  };
+
+  useEffect(() => {
+    const g = game.current;
+    if (command.type === "build") g.placed = g.placed.map(() => true);
+    else scatter();
+    // `scatter` reads layout at call time; re-running on resize would reshuffle a game in progress.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [command.n]);
+
+  useFrame((state, delta) => {
+    const g = game.current;
+    const dt = Math.min(delta, 1 / 30);
+    const t = state.clock.elapsedTime;
+    parts.forEach((_, i) => {
+      const m = meshes.current[i];
+      if (!m) return;
+      if (g.placed[i]) {
+        // Glide home and square up.
+        const k = motion.reduced ? 1 : 1 - Math.exp(-dt * 12);
+        g.pos[i].lerp(new THREE.Vector3(), k);
+        g.rot[i] += (0 - g.rot[i]) * k;
+      }
+      const floating = !g.placed[i] && g.dragging !== i && !motion.reduced;
+      m.position.set(g.pos[i].x, g.pos[i].y + (floating ? Math.sin(t * 1.5 + i) * 0.02 : 0), g.dragging === i ? 0.25 : 0);
+      m.rotation.set(0, 0, g.rot[i]);
+      const lift = g.dragging === i ? 1.08 : 1;
+      m.scale.setScalar(damp(m.scale.x, lift, dt, 12));
+    });
+
+    // Dev-only: where each piece and its home are on screen (NDC), for the drag test harness.
+    if (process.env.NODE_ENV !== "production" && board.current) {
+      const cam = state.camera;
+      const ndc = (v: THREE.Vector3) => board.current!.localToWorld(v.clone()).project(cam);
+      // A point guaranteed to be on each piece (centroid of its first front-face triangle),
+      // turned by the piece's current rotation. Grab there, drop at the same point minus
+      // the piece's offset, and the piece lands home: what a person does by eye.
+      const onPiece = (i: number) => {
+        const a = parts[i].geo.attributes.position;
+        const c = new THREE.Vector3(
+          (a.getX(0) + a.getX(1) + a.getX(2)) / 3,
+          (a.getY(0) + a.getY(1) + a.getY(2)) / 3,
+          0,
+        );
+        return c.applyAxisAngle(new THREE.Vector3(0, 0, 1), g.rot[i]);
+      };
+      (window as unknown as { __builder: unknown }).__builder = {
+        pieces: g.pos.map((p, i) => ndc(p.clone().add(onPiece(i)))),
+        homes: parts.map((_, i) => ndc(onPiece(i))),
+        placed: [...g.placed],
+      };
+    }
+
+    const placed = g.placed.filter(Boolean).length;
+    if (placed !== g.reported) {
+      g.reported = placed;
+      if (placed === parts.length && g.won < 0) g.won = t;
+      onProgress(placed);
+    }
+
+    // Victory: one full spin with a pop, and sparkles flying out.
+    const since = g.won < 0 ? -1 : t - g.won;
+    if (board.current) {
+      const k = since < 0 || motion.reduced ? 0 : clamp01(since / 1.4);
+      board.current.rotation.y = easeInOut(k) * Math.PI * 2;
+      board.current.scale.setScalar(1 + Math.sin(Math.PI * k) * 0.12);
+    }
+    if (sparkles.current) {
+      const k = since < 0 ? 1 : clamp01(since / 1.6);
+      sparkles.current.visible = since >= 0 && k < 1 && !motion.reduced;
+      sparkles.current.children.forEach((c, i) => {
+        const a = (i / sparkles.current!.children.length) * Math.PI * 2;
+        const r = easeOut(k) * 1.4;
+        c.position.set(Math.cos(a) * r, Math.sin(a) * r, 0.3);
+        c.scale.setScalar((1 - k) * 0.06);
+      });
+    }
+  });
+
+  // Dragging happens on the z = 0 plane of the board.
+  const toBoard = (e: ThreeEvent<PointerEvent>) => {
+    if (!e.ray.intersectPlane(scratch.plane, scratch.hit) || !board.current) return null;
+    return board.current.worldToLocal(scratch.hit.clone());
+  };
+
+  const onDown = (i: number) => (e: ThreeEvent<PointerEvent>) => {
+    const g = game.current;
+    if (!interactive || g.placed[i] || g.dragging !== -1) return;
+    e.stopPropagation();
+    const p = toBoard(e);
+    if (!p) return;
+    g.dragging = i;
+    g.grab.copy(p).sub(g.pos[i]);
+    (e.target as Element).setPointerCapture?.(e.pointerId);
+    document.body.style.cursor = "grabbing";
+  };
+  const onMove = (i: number) => (e: ThreeEvent<PointerEvent>) => {
+    const g = game.current;
+    if (g.dragging !== i) return;
+    const p = toBoard(e);
+    if (p) g.pos[i].copy(p.sub(g.grab)).setZ(0);
+  };
+  const onUp = (i: number) => (e: ThreeEvent<PointerEvent>) => {
+    const g = game.current;
+    if (g.dragging !== i) return;
+    g.dragging = -1;
+    (e.target as Element).releasePointerCapture?.(e.pointerId);
+    document.body.style.cursor = "";
+    if (g.pos[i].length() < SNAP) g.placed[i] = true;
+  };
+
+  return (
+    <group ref={board} scale={1.8}>
+      {/* the outline to build onto */}
+      {parts.map((part, i) => (
+        <mesh key={`ghost-${i}`} geometry={part.geo} position={[0, 0, -0.12]} scale={[1, 1, 0.05]}>
+          <meshBasicMaterial color={palette.olive} transparent opacity={0.12} depthWrite={false} />
+        </mesh>
+      ))}
+      {parts.map((part, i) => (
+        <mesh
+          key={i}
+          ref={(m) => void (meshes.current[i] = m)}
+          geometry={part.geo}
+          onPointerDown={onDown(i)}
+          onPointerMove={onMove(i)}
+          onPointerUp={onUp(i)}
+          onPointerOver={() => {
+            if (!game.current.placed[i] && game.current.dragging === -1) document.body.style.cursor = "grab";
+          }}
+          onPointerOut={() => {
+            if (game.current.dragging === -1) document.body.style.cursor = "";
+          }}
+        >
+          <meshPhysicalMaterial color={part.color} roughness={0.25} clearcoat={1} clearcoatRoughness={0.1} />
+        </mesh>
+      ))}
+      <group ref={sparkles} visible={false}>
+        {Array.from({ length: 14 }, (_, i) => (
+          <mesh key={i}>
+            <octahedronGeometry args={[1, 0]} />
+            <meshStandardMaterial color={i % 2 ? "#f58220" : "#1791c8"} emissive={i % 2 ? "#f58220" : "#1791c8"} emissiveIntensity={0.8} />
+          </mesh>
+        ))}
+      </group>
     </group>
   );
 }
@@ -579,6 +789,24 @@ export function BuddySpot({ className }: { className: string }) {
   return (
     <Spot className={className} camera={7}>
       <BuddyScene />
+    </Spot>
+  );
+}
+
+export function BuilderSpot({
+  className,
+  command,
+  interactive,
+  onProgress,
+}: {
+  className: string;
+  command: BuilderCommand;
+  interactive: boolean;
+  onProgress: (placed: number) => void;
+}) {
+  return (
+    <Spot className={className} camera={5}>
+      <BuilderScene command={command} interactive={interactive} onProgress={onProgress} />
     </Spot>
   );
 }

@@ -1,11 +1,14 @@
 import { Fragment } from "react";
 import Image from "next/image";
 import MemoryCard from "@/components/MemoryCard";
+import MobileMenu from "@/components/MobileMenu";
 import Reveal from "@/components/Reveal";
+import RobotBuilder from "@/components/RobotBuilder";
 import ScrollDriver from "@/components/ScrollDriver";
 import StageMount from "@/components/StageMount";
 import ThemeToggle from "@/components/ThemeToggle";
 import ThreadPlane from "@/components/ThreadPlane";
+import { Arrow } from "@/components/icons";
 import { BuddySpot, ClosingSpot, DeviceSpot, FeaturedSpot, HeroSpot } from "@/components/three/scenes";
 import {
   certificates,
@@ -26,6 +29,7 @@ const jsonLd = {
   "@type": "Person",
   name: person.name,
   jobTitle: person.role,
+  email: `mailto:${person.email}`,
   address: { "@type": "PostalAddress", addressCountry: "LB" },
   worksFor: { "@type": "Organization", name: "TheBooker" },
   alumniOf: { "@type": "CollegeOrUniversity", name: "Lebanese International University" },
@@ -35,21 +39,23 @@ const jsonLd = {
 
 const reveal = (i = 0) => ({ "data-reveal": "", style: { ["--i" as string]: i } });
 
-const Arrow = () => (
-  <svg viewBox="0 0 16 16" className="size-3.5" aria-hidden>
-    <path d="M4 12 12 4M6 4h6v6" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-  </svg>
-);
+const navLinks = [
+  ["Work", "#work"],
+  ["Process", "#process"],
+  ["About", "#about"],
+  ["Toolkit", "#toolkit"],
+] as const;
 
 /**
  * Splits a line into letters that rise one after another. Letters are grouped per
- * word so lines only break between words. Screen readers get the plain text.
+ * word so lines only break between words. Screen readers get one plain sr-only copy.
  */
 function Kinetic({ text, className, offset = 0 }: { text: string; className: string; offset?: number }) {
   const words = text.split(" ");
   let i = offset;
   return (
-    <span className={className} aria-label={text}>
+    <span className={className}>
+      <span className="sr-only">{text}</span>
       {words.map((word, w) => (
         <Fragment key={w}>
           <span aria-hidden className="inline-block whitespace-nowrap">
@@ -59,7 +65,7 @@ function Kinetic({ text, className, offset = 0 }: { text: string; className: str
               </span>
             ))}
           </span>
-          {w < words.length - 1 && " "}
+          {w < words.length - 1 && <span aria-hidden> </span>}
         </Fragment>
       ))}
     </span>
@@ -89,23 +95,20 @@ function Sparkles() {
 }
 
 function Nav() {
-  const links = [
-    ["Work", "#work"],
-    ["Process", "#process"],
-    ["About", "#about"],
-    ["Toolkit", "#toolkit"],
-  ];
   return (
     <header className="fixed inset-x-0 top-0 z-40 px-4 pt-4">
+      <a href="#main" className="skip-link">
+        Skip to content
+      </a>
       <nav
         aria-label="Main"
-        className="pill-soft mx-auto flex max-w-5xl items-center justify-between rounded-full px-5 py-2.5"
+        className="pill-soft relative mx-auto flex max-w-5xl items-center justify-between rounded-full px-5 py-2.5"
       >
         <a href="#top" className="font-serif text-xl italic leading-none">
           {person.name}
         </a>
         <ul className="hidden items-center gap-7 text-sm text-ink-soft md:flex">
-          {links.map(([label, href]) => (
+          {navLinks.map(([label, href]) => (
             <li key={href}>
               <a href={href} className="transition-colors hover:text-ink">
                 {label}
@@ -115,9 +118,10 @@ function Nav() {
         </ul>
         <div className="flex items-center gap-2">
           <ThemeToggle />
-          <a href={person.github} target="_blank" rel="noopener noreferrer" className="pill pill-solid !py-1.5 max-sm:hidden">
+          <a href={person.github} target="_blank" rel="noopener noreferrer" className="pill pill-solid !py-1.5 max-md:hidden">
             GitHub <Arrow />
           </a>
+          <MobileMenu links={navLinks} github={person.github} />
         </div>
       </nav>
     </header>
@@ -141,24 +145,23 @@ function Hero() {
       </div>
       {/* Outside the moving plate, so the hero always melts into the page below. */}
       <div aria-hidden className="absolute inset-x-0 bottom-0 -z-10 h-1/3 bg-gradient-to-b from-transparent to-mist" />
-      <div className="absolute inset-x-0 top-[11vh] px-4 text-center max-md:top-[12vh]">
-        <p className="intro-pill pill pill-soft mx-auto !text-xs uppercase tracking-[0.2em] text-olive">
-          <span className="relative size-2 rounded-full bg-accent dot-pulse" aria-hidden />
-          React · React Native · {person.location}
-        </p>
-        <h1 id="hero-title" className="mt-5">
+      <div className="absolute inset-x-0 top-[12vh] px-4 text-center max-md:top-[13vh]">
+        <h1 id="hero-title">
           <Kinetic
             text={`Hi, I'm ${person.first}`}
-            offset={4}
+            offset={0}
             className="block font-display text-[clamp(2.8rem,7.4vw,7rem)] font-extrabold leading-[0.95] tracking-[-0.03em] text-moss"
           />
-          {/* This line sits behind the portrait on purpose: type between the 3D planes. */}
-          <span className="wipe-in block font-serif text-[clamp(3.2rem,9vw,8.6rem)] italic leading-[0.95] tracking-[-0.01em]">
-            React Developer
+          <span className="sr-only"> </span>
+          <span className="wipe-in mt-1 block font-serif text-[clamp(2.3rem,6vw,5.6rem)] italic leading-[1] tracking-[-0.01em]">
+            React &amp; React Native Developer
           </span>
         </h1>
-        {/* Phones: the portrait fills the lower screen, so the action sits under the title. */}
-        <a href="#work" className="intro-late pill pill-solid mt-6 md:hidden">
+        {/* Phones: the portrait fills the lower screen, so the pitch and the action sit here. */}
+        <p className="intro-late mx-auto mt-4 max-w-xs text-[0.95rem] leading-6 text-ink-soft md:hidden">
+          Web apps, mobile apps and the dashboards that run them. Based in {person.location}.
+        </p>
+        <a href="#work" className="intro-late pill pill-solid mt-5 md:hidden">
           See my work <Arrow />
         </a>
       </div>
@@ -168,7 +171,7 @@ function Hero() {
       <div className="intro-late absolute bottom-10 left-6 hidden max-w-[16rem] md:block lg:left-12">
         <p className="pill pill-soft !text-[0.8rem] text-olive">Web · Mobile · Admin dashboards</p>
         <p className="pill-soft mt-3 rounded-2xl px-4 py-3 text-sm leading-6 text-ink-soft">
-          2+ years building production apps for real clients.
+          2+ years building production apps for real clients, from {person.location}.
         </p>
       </div>
       <div className="intro-late absolute bottom-10 right-6 hidden max-w-[19rem] text-right md:block lg:right-12">
@@ -188,7 +191,7 @@ function Clients() {
   const row = (hidden: boolean) => (
     <ul aria-hidden={hidden || undefined} className="flex shrink-0 items-center gap-12 pr-12">
       {clients.map((c) => (
-        <li key={c} className="flex items-center gap-3 whitespace-nowrap font-serif text-3xl italic text-olive/80">
+        <li key={c} className="flex items-center gap-3 whitespace-nowrap font-serif text-3xl italic text-olive">
           <span aria-hidden className="size-2 rotate-45 rounded-[2px] bg-sage" />
           {c}
         </li>
@@ -196,10 +199,10 @@ function Clients() {
     </ul>
   );
   return (
-    <section data-section aria-label="Built for" className="py-14">
-      <p {...reveal(0)} className="text-center font-display text-sm font-medium uppercase tracking-[0.25em] text-ink-soft">
-        Built for
-      </p>
+    <section data-section aria-labelledby="clients-title" className="pb-4 pt-14">
+      <h2 {...reveal(0)} id="clients-title" className="text-center font-display text-sm font-medium uppercase tracking-[0.25em] text-ink-soft">
+        Clients and teams
+      </h2>
       {/* Two copies side by side so the drift loops without a seam. */}
       <div {...reveal(1)} className="marquee-mask mt-6 overflow-hidden">
         <div className="marquee flex w-max">
@@ -220,20 +223,20 @@ function Featured() {
       data-section
       data-progress="pin"
       aria-labelledby="featured-title"
-      className="relative scroll-mt-0 px-4 md:h-[320vh]"
+      className="relative scroll-mt-0 px-4 md:h-[230vh]"
     >
-      <div className="mx-auto grid max-w-6xl items-center gap-8 py-20 md:sticky md:top-0 md:h-screen md:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] md:py-0">
-        <div>
-          <p {...reveal(0)} className="eyebrow">/ Featured project /</p>
+      <div className="relative mx-auto grid max-w-6xl items-center gap-8 py-16 md:sticky md:top-0 md:h-screen md:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] md:py-0">
+        <div className="relative z-10">
           <h2
-            {...reveal(1)}
+            {...reveal(0)}
             id="featured-title"
-            className="mt-2 font-display text-[clamp(2.4rem,5vw,4.2rem)] font-bold tracking-[-0.03em]"
+            className="font-display text-[clamp(2.4rem,5vw,4.2rem)] font-bold tracking-[-0.03em]"
           >
             {featured.name}
           </h2>
-          <div {...reveal(2)} className="clay mt-6 p-7 lg:p-8">
+          <div {...reveal(1)} className="clay mt-6 p-7 lg:p-8">
             <p className="font-serif text-2xl italic text-olive">{featured.kind}</p>
+            <p className="mt-1 text-sm font-medium text-olive">{featured.role}</p>
             <p className="mt-3 leading-7 text-ink-soft">{featured.summary}</p>
             <ul className="mt-5 space-y-2.5 text-[0.95rem] leading-6">
               {featured.points.map((p, i) => (
@@ -257,7 +260,11 @@ function Featured() {
             )}
           </div>
         </div>
-        <FeaturedSpot className="relative h-[420px] md:h-[78vh]" screen={featured.screen} />
+        {/* The 3D bleeds past its column to the viewport edge, so nothing is sliced mid-page. */}
+        <div className="relative h-[420px] md:h-[78vh]">
+          <FeaturedSpot className="absolute inset-y-0 -left-4 -right-4 md:left-0 md:right-[calc(-1*max(1rem,50vw-36rem))]" screen={featured.screen} />
+        </div>
+        <div aria-hidden className="pin-progress hidden md:block" />
       </div>
     </section>
   );
@@ -266,8 +273,8 @@ function Featured() {
 /** Pinned on desktop: the cards ride a sideways rail. Phones get a normal vertical stack. */
 function Works() {
   return (
-    <section data-section data-progress="pin" aria-labelledby="works-title" className="theme-sage-only relative md:h-[220vh]">
-      <div className="py-20 md:sticky md:top-0 md:flex md:h-screen md:flex-col md:justify-center md:overflow-hidden md:py-0">
+    <section id="works" data-section data-progress="pin" aria-labelledby="works-title" className="theme-sage-only relative md:h-[220vh]">
+      <div className="relative py-20 md:sticky md:top-0 md:flex md:h-screen md:flex-col md:justify-center md:overflow-hidden md:py-0">
         <div data-rail className="flex flex-col gap-6 px-4 will-change-transform md:flex-row md:items-stretch md:px-[6vw]">
           <div {...reveal(0)} className="flex shrink-0 flex-col justify-center md:w-[26vw] md:pr-4">
             <h2 id="works-title" className="font-display text-[clamp(2.4rem,4.6vw,4.2rem)] font-bold leading-[0.98] tracking-[-0.03em]">
@@ -277,48 +284,82 @@ function Works() {
               Client sites and a SaaS product. Every screen here is the real site, scrolling as you scroll.
             </p>
           </div>
-          {works.map((w, i) => (
-            <article
-              key={w.id}
-              {...reveal(1 + i)}
-              className="clay clay-lift flex shrink-0 flex-col overflow-hidden p-3 md:w-[min(540px,40vw)]"
-            >
-              <DeviceSpot className="relative h-[250px] rounded-[20px] bg-gradient-to-b from-mist/70 to-cream/40 md:h-[38vh]" project={w} />
-              <div className="flex flex-1 flex-col px-3 pb-3 pt-5">
-                <p className="font-mono text-[0.7rem] uppercase tracking-[0.18em] text-ink-soft">{w.kind}</p>
-                <h3 className="mt-1.5 font-display text-2xl font-bold tracking-[-0.02em]">{w.name}</h3>
-                <p className="mt-2 text-[0.95rem] leading-6 text-ink-soft">{w.summary}</p>
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {w.stack.map((s) => (
-                    <span key={s} className="chip">
-                      {s}
-                    </span>
-                  ))}
-                </div>
-                <div className="mt-auto pt-5">
-                  {w.href ? (
-                    <a
-                      href={w.href}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 text-sm font-medium text-moss underline decoration-sage/50 underline-offset-4 hover:text-olive"
-                    >
-                      {w.hrefLabel} <Arrow />
-                    </a>
-                  ) : (
-                    <span className="text-sm text-ink-soft">Private SaaS, no public link</span>
+          {works.map((w, i) => {
+            const feature = w.points.length > 0;
+            return (
+              <article
+                key={w.id}
+                {...reveal(1 + i)}
+                className={`clay clay-lift flex shrink-0 flex-col overflow-hidden p-3 ${
+                  feature ? "md:w-[min(760px,54vw)] md:flex-row" : "md:w-[min(540px,40vw)]"
+                }`}
+              >
+                <DeviceSpot
+                  className={`relative h-[250px] shrink-0 rounded-[20px] bg-gradient-to-b from-mist/70 to-cream/40 ${
+                    feature ? "md:h-auto md:w-[52%]" : "md:h-[38vh]"
+                  }`}
+                  project={w}
+                />
+                <div className="flex flex-1 flex-col px-3 pb-3 pt-5 md:px-5">
+                  <h3 className="font-display text-2xl font-bold tracking-[-0.02em]">{w.name}</h3>
+                  <p className="mt-1 text-sm text-ink-soft">
+                    {w.kind} · <span className="font-medium text-olive">{w.role}</span>
+                  </p>
+                  <p className="mt-3 text-[0.95rem] leading-6 text-ink-soft">{w.summary}</p>
+                  {feature && (
+                    <ul className="mt-4 space-y-2 text-[0.92rem] leading-6">
+                      {w.points.map((p) => (
+                        <li key={p} className="flex gap-3">
+                          <span aria-hidden className="mt-2 size-1.5 shrink-0 rounded-full bg-accent" />
+                          {p}
+                        </li>
+                      ))}
+                    </ul>
                   )}
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {w.stack.map((s) => (
+                      <span key={s} className="chip">
+                        {s}
+                      </span>
+                    ))}
+                  </div>
+                  <div className="mt-auto pt-5">
+                    {w.href ? (
+                      <a href={w.href} target="_blank" rel="noopener noreferrer" className="link">
+                        {w.hrefLabel} <Arrow />
+                      </a>
+                    ) : (
+                      <span className="text-sm text-ink-soft">Private SaaS, no public link</span>
+                    )}
+                  </div>
                 </div>
-              </div>
-            </article>
-          ))}
+              </article>
+            );
+          })}
           {/* trailing room so the last card can travel fully into view */}
           <div aria-hidden className="hidden shrink-0 md:block md:w-[2vw]" />
         </div>
+        <div aria-hidden className="pin-progress hidden md:block" />
       </div>
     </section>
   );
 }
+
+const stepIcons = [
+  // Discover: a magnifier over a checklist line
+  <svg key="d" viewBox="0 0 24 24" className="size-7" aria-hidden>
+    <circle cx="10.5" cy="10.5" r="6" fill="none" stroke="currentColor" strokeWidth="1.6" />
+    <path d="M15 15l5 5M8 10.5h5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+  </svg>,
+  // Build: angle brackets
+  <svg key="b" viewBox="0 0 24 24" className="size-7" aria-hidden>
+    <path d="M8 6l-5 6 5 6M16 6l5 6-5 6M13.5 4l-3 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>,
+  // Ship: an arrow leaving a box
+  <svg key="s" viewBox="0 0 24 24" className="size-7" aria-hidden>
+    <path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>,
+];
 
 function Process() {
   const at = [0.15, 0.45, 0.75];
@@ -338,16 +379,17 @@ function Process() {
         >
           How I work
         </h2>
-        <p {...reveal(1)} className="mt-3 max-w-md leading-7 text-ink-soft">
-          From the first requirement to deployment, and support after launch.
+        <p {...reveal(1)} className="mt-3 max-w-xl text-lg leading-8 text-ink-soft">
+          I teach kids robotics at RoboStars, so I&apos;m used to breaking a problem into steps anyone can follow.
+          Client work runs the same way.
         </p>
-        <ol className="relative mt-20 grid gap-6 md:grid-cols-3">
+        <ol className="relative mt-24 grid gap-12 md:grid-cols-3 md:gap-10">
           {/* The thread draws itself with scroll; each step lights as it arrives. */}
           <svg
             aria-hidden
             viewBox="0 0 1000 120"
             preserveAspectRatio="none"
-            className="pointer-events-none absolute inset-x-[12%] -top-12 hidden h-24 w-[76%] md:block"
+            className="pointer-events-none absolute inset-x-[12%] -top-16 hidden h-24 w-[76%] md:block"
           >
             <defs>
               <mask id="thread-draw">
@@ -358,14 +400,10 @@ function Process() {
           </svg>
           <ThreadPlane pathId="thread-path" />
           {process.map((p, i) => (
-            <li
-              key={p.step}
-              className={`step clay clay-lift relative p-7 ${i === 1 ? "md:-translate-y-6" : ""}`}
-              style={{ ["--s" as string]: at[i] }}
-            >
-              <span className="step-num font-display text-5xl font-extrabold">{p.step}</span>
-              <h3 className="mt-4 font-serif text-3xl italic">{p.title}</h3>
-              <p className="mt-2 leading-7 text-ink-soft">{p.body}</p>
+            <li key={p.step} className={`step relative ${i === 1 ? "md:translate-y-8" : ""}`} style={{ ["--s" as string]: at[i] }}>
+              <span className="step-icon inline-flex size-14 items-center justify-center rounded-full">{stepIcons[i]}</span>
+              <h3 className="mt-5 font-serif text-3xl italic">{p.title}</h3>
+              <p className="mt-2 max-w-xs leading-7 text-ink-soft">{p.body}</p>
             </li>
           ))}
         </ol>
@@ -403,14 +441,13 @@ function About() {
         className="relative mx-auto max-w-6xl overflow-hidden rounded-[40px] text-paper shadow-[0_40px_80px_-40px_rgb(89_95_62/0.8)]"
       >
         <PaperBackdrop />
-        {/* Frosted olive panels behind the copy only: the paper stays visible around them. */}
+        {/* Olive scrims behind the copy only: the paper stays visible around them. */}
         <div className="relative grid gap-6 p-5 md:gap-8 md:p-12 lg:grid-cols-2">
           <div className="about-panel self-start">
-            <p className="font-serif text-xl italic text-paper/80">/ Who I am /</p>
-            <h2 id="about-title" className="mt-3 font-display text-[clamp(2.2rem,4.6vw,3.6rem)] font-bold leading-[1.02] tracking-[-0.03em]">
+            <h2 id="about-title" className="font-display text-[clamp(2.2rem,4.6vw,3.6rem)] font-bold leading-[1.02] tracking-[-0.03em]">
               Developer by day, robotics teacher on the side.
             </h2>
-            <p className="mt-5 max-w-md leading-7 text-paper/85">
+            <p className="mt-5 max-w-md leading-7 text-paper/90">
               I build React and React Native products at TheBooker and for freelance clients, and I teach kids robotics
               and programming at RoboStars, including kids with special needs. Currently studying for an MSc in Computer
               Science.
@@ -418,29 +455,29 @@ function About() {
           </div>
           <div className="about-panel space-y-8">
             <div>
-              <h3 className="font-mono text-xs uppercase tracking-[0.2em] text-paper/70">Experience</h3>
+              <h3 className="font-display text-base font-semibold tracking-wide text-paper">Experience</h3>
               <ul className="mt-3 divide-y divide-paper/20 border-y border-paper/20">
                 {experience.map((e, i) => (
                   <li key={e.role} {...reveal(1 + i)} className="grid grid-cols-[1fr_auto] gap-x-4 py-3.5">
                     <span className="font-medium">{e.role}</span>
-                    <span className="text-sm text-paper/75">{e.period}</span>
-                    <span className="text-sm text-paper/75">{e.place}</span>
+                    <span className="text-sm text-paper/85">{e.period}</span>
+                    <span className="text-sm text-paper/85">{e.place}</span>
                   </li>
                 ))}
               </ul>
             </div>
             <div>
-              <h3 className="font-mono text-xs uppercase tracking-[0.2em] text-paper/70">Studies</h3>
+              <h3 className="font-display text-base font-semibold tracking-wide text-paper">Studies</h3>
               <ul className="mt-3 divide-y divide-paper/20 border-y border-paper/20">
                 {education.map((e, i) => (
                   <li key={e.title} {...reveal(4 + i)} className="grid grid-cols-[1fr_auto] gap-x-4 py-3.5">
                     <span className="font-medium">{e.title}</span>
-                    <span className="text-sm text-paper/75">{e.period}</span>
-                    <span className="text-sm text-paper/75">{e.place}</span>
+                    <span className="text-sm text-paper/85">{e.period}</span>
+                    <span className="text-sm text-paper/85">{e.place}</span>
                   </li>
                 ))}
               </ul>
-              <p {...reveal(6)} className="mt-4 text-sm leading-6 text-paper/80">
+              <p {...reveal(6)} className="mt-4 text-sm leading-6 text-paper/85">
                 Cisco: {certificates.join(", ")}.
               </p>
             </div>
@@ -451,34 +488,27 @@ function About() {
   );
 }
 
+/** Each group says where it was used, so the list reads as evidence rather than a tag cloud. */
 function Toolkit() {
-  let n = 0;
   return (
     <section id="toolkit" data-section aria-labelledby="toolkit-title" className="scroll-mt-24 px-4 py-20">
       <div className="mx-auto max-w-5xl">
         <h2
           {...reveal(0)}
           id="toolkit-title"
-          className="text-center font-display text-[clamp(2.4rem,5vw,4.2rem)] font-bold tracking-[-0.03em]"
+          className="font-display text-[clamp(2.4rem,5vw,4.2rem)] font-bold tracking-[-0.03em]"
         >
           Toolkit
         </h2>
-        <div className="clay mt-10 divide-y divide-sand/40 px-6 md:px-10">
-          {toolkit.map((t) => (
-            <div key={t.group} className="grid gap-3 py-5 md:grid-cols-[10rem_1fr] md:items-center">
-              <h3 {...reveal(n++)} className="font-serif text-2xl italic text-olive">
-                {t.group}
-              </h3>
-              <div className="flex flex-wrap gap-2">
-                {t.items.map((item) => (
-                  <span key={item} {...reveal(n++)} className="chip chip-pop !text-[0.85rem]">
-                    {item}
-                  </span>
-                ))}
-              </div>
+        <dl className="mt-10 border-t border-sand/60">
+          {toolkit.map((t, i) => (
+            <div key={t.group} {...reveal(1 + i)} className="grid gap-2 border-b border-sand/60 py-6 md:grid-cols-[10rem_1fr_minmax(0,16rem)] md:items-baseline md:gap-8">
+              <dt className="font-serif text-2xl italic text-olive">{t.group}</dt>
+              <dd className="text-lg leading-7">{t.items.join(", ")}</dd>
+              <dd className="text-sm leading-6 text-ink-soft">Used in {t.usedIn}</dd>
             </div>
           ))}
-        </div>
+        </dl>
       </div>
     </section>
   );
@@ -486,23 +516,34 @@ function Toolkit() {
 
 function Closing() {
   return (
-    <section data-section aria-labelledby="closing-title" className="px-4 pb-10 pt-10">
+    <section id="closing" data-section aria-labelledby="closing-title" className="px-4 pb-10 pt-10">
       <div className="mx-auto max-w-4xl text-center">
         <ClosingSpot className="relative mx-auto h-[340px] max-w-2xl" />
-        <h2 {...reveal(0)} id="closing-title" className="font-serif text-[clamp(2.6rem,6vw,4.6rem)] italic leading-none text-moss">
+        <h2 {...reveal(0)} id="closing-title" className="mt-8 font-serif text-[clamp(2.6rem,6vw,4.6rem)] italic leading-none text-moss">
           Thanks for scrolling.
         </h2>
-        <p {...reveal(1)} className="mx-auto mt-4 max-w-md leading-7 text-ink-soft">
-          More of my work and history lives on GitHub and LinkedIn.
+        <p {...reveal(1)} className="mx-auto mt-5 max-w-md text-lg leading-7 text-ink-soft">
+          Open to React and React Native roles. Email is the quickest way to reach me.
         </p>
-        <div {...reveal(2)} className="mt-7 flex justify-center gap-3">
-          <a href={person.github} target="_blank" rel="noopener noreferrer" className="pill pill-solid">
-            GitHub <Arrow />
+        <div {...reveal(2)} className="mt-7 flex flex-wrap justify-center gap-3">
+          <a href={`mailto:${person.email}`} className="pill pill-solid">
+            {person.email}
           </a>
-          <a href={person.linkedin} target="_blank" rel="noopener noreferrer" className="pill pill-soft">
-            LinkedIn <Arrow />
+          <a href={person.cv} download className="pill pill-soft">
+            Download CV
+            <svg viewBox="0 0 16 16" className="size-3.5" aria-hidden>
+              <path d="M8 3v8M4.5 7.5 8 11l3.5-3.5M3 13h10" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
           </a>
         </div>
+        <p {...reveal(3)} className="mt-6 flex justify-center gap-6 text-sm">
+          <a href={person.github} target="_blank" rel="noopener noreferrer" className="link">
+            GitHub <Arrow />
+          </a>
+          <a href={person.linkedin} target="_blank" rel="noopener noreferrer" className="link">
+            LinkedIn <Arrow />
+          </a>
+        </p>
       </div>
       <footer className="mx-auto mt-20 flex max-w-6xl flex-wrap items-center justify-between gap-3 border-t border-sand/50 pt-6 text-xs text-ink-soft max-md:pr-28 md:pr-40">
         <span>
@@ -528,7 +569,7 @@ export default function Home() {
       <ScrollDriver />
       <Reveal />
       <Nav />
-      <main>
+      <main id="main">
         <Hero />
         <Clients />
         <Featured />
@@ -536,6 +577,7 @@ export default function Home() {
         <MemoryCard works={works} />
         <Process />
         <About />
+        <RobotBuilder />
         <Toolkit />
         <Closing />
       </main>

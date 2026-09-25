@@ -659,7 +659,13 @@ function circle(cx: number, cy: number, r: number) {
   return s;
 }
 
-function logoParts() {
+/** One shared set of logo geometries for the badge and the build-a-robot game. */
+let logoCache: ReturnType<typeof buildLogoParts> | null = null;
+export function logoParts() {
+  return (logoCache ??= buildLogoParts());
+}
+
+function buildLogoParts() {
   const head = polygon([[73, 208], [643, 208], [515, 438], [200, 438]]);
   for (const [cx, cy] of [[291, 313], [433, 313]]) {
     const hole = new THREE.Path();
