@@ -14,6 +14,7 @@
   --ink-soft: #5f5c52;
   --accent: #e0703a;
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --display-face: var(--font-syne);
   color-scheme: light;
 }
 
@@ -31,7 +32,7 @@
   --font-sans: var(--font-geist-sans), system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
   --font-serif: var(--font-instrument), Georgia, serif;
-  --font-display: var(--font-syne), var(--font-geist-sans), system-ui, sans-serif;
+  --font-display: var(--display-face), var(--font-geist-sans), system-ui, sans-serif;
 }
 
 html {
@@ -300,4 +301,131 @@ body::after {
 @keyframes pulse {
   from { transform: scale(1); opacity: 0.6; }
   to { transform: scale(2.6); opacity: 0; }
+}
+
+/* =====================================================================
+   Soft Club theme: PS2 boot-screen blue, Y2K chrome and jelly, pastel club
+   flyers. Same page and motion; the tokens, materials and a few surfaces change.
+   ===================================================================== */
+
+[data-theme="club"] {
+  --mist: #e6ecf7;
+  --cream: #f1eefb;
+  --paper: #fafbff;
+  --sand: #d9c4ff;
+  --sand-2: #c7b6f5;
+  --moss: #4d5de0;
+  --sage: #a9c6ff;
+  --olive: #3a3f95;
+  --ink: #151a3a;
+  --ink-soft: #565d86;
+  --accent: #f25cc0;
+  --display-face: var(--font-unbounded);
+}
+
+/* Each theme shows its own version of Selected works. */
+[data-theme="club"] .theme-sage-only,
+:root:not([data-theme="club"]) .theme-club-only {
+  display: none;
+}
+
+[data-theme="club"] body {
+  background:
+    radial-gradient(55vw 45vh at 85% 6%, rgb(255 182 232 / 0.45), transparent 70%),
+    radial-gradient(50vw 45vh at 8% 28%, rgb(159 216 255 / 0.55), transparent 70%),
+    radial-gradient(60vw 50vh at 60% 70%, rgb(201 184 255 / 0.4), transparent 70%),
+    linear-gradient(180deg, #eaf0fb 0%, #f3effc 50%, #e6ecf7 100%);
+}
+
+/* The generated plates, re-graded to icy lilac instead of regenerated. */
+[data-theme="club"] .plate-drift img,
+[data-theme="club"] .paper img {
+  filter: hue-rotate(150deg) saturate(1.15) brightness(1.05);
+}
+
+@layer components {
+  /* Frosted glass with an iridescent rim, the Y2K version of the clay card. */
+  [data-theme="club"] .clay {
+    background: linear-gradient(160deg, rgb(255 255 255 / 0.72), rgb(236 240 255 / 0.5));
+    border: 1px solid transparent;
+    background-clip: padding-box;
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.95),
+      0 0 0 1px rgb(169 198 255 / 0.55),
+      0 24px 48px -26px rgb(77 93 224 / 0.45),
+      0 2px 8px -2px rgb(242 92 192 / 0.15);
+  }
+
+  /* Glossy aqua button: a highlight band over a candy gradient. */
+  [data-theme="club"] .pill-solid {
+    background:
+      linear-gradient(180deg, rgb(255 255 255 / 0.55) 0%, rgb(255 255 255 / 0.1) 48%, transparent 52%),
+      linear-gradient(180deg, #7d8cff, #4d5de0);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.7),
+      0 10px 24px -10px rgb(77 93 224 / 0.8);
+  }
+
+  [data-theme="club"] .chip {
+    background: linear-gradient(180deg, rgb(255 255 255 / 0.8), rgb(169 198 255 / 0.3));
+    color: var(--olive);
+    border-color: rgb(169 198 255 / 0.7);
+  }
+
+}
+
+/* .about-panel is unlayered, so its Soft Club override must be too. */
+[data-theme="club"] .about-panel {
+  background: rgb(46 50 128 / 0.55);
+  border-color: rgb(255 255 255 / 0.25);
+}
+
+/* Theme switch: a little sage or candy orb. */
+.theme-toggle-dot {
+  background: radial-gradient(circle at 35% 30%, #fff 0 18%, #959d69 45%, #595f3e 100%);
+  box-shadow: 0 0 0 1px rgb(255 255 255 / 0.6);
+}
+[data-theme="club"] .theme-toggle-dot {
+  background: conic-gradient(from 200deg, #a9c6ff, #ffb3e6, #d9c4ff, #9fd8ff, #a9c6ff);
+  box-shadow: 0 0 0 1px rgb(255 255 255 / 0.8), 0 0 10px rgb(242 92 192 / 0.35);
+}
+
+/* Memory card browser: PS2 blue haze, a soft floor, glassy slots. */
+.memory {
+  background:
+    radial-gradient(80% 60% at 50% 0%, rgb(255 255 255 / 0.85), transparent 70%),
+    linear-gradient(180deg, #cfdcff 0%, #e8e3ff 55%, #f6f3ff 100%);
+  box-shadow:
+    inset 0 1px 0 #fff,
+    0 0 0 1px rgb(169 198 255 / 0.6),
+    0 40px 80px -40px rgb(77 93 224 / 0.55);
+}
+.memory-slot {
+  transition: background-color 0.4s var(--ease-out);
+}
+.memory-slot[aria-pressed="true"] {
+  background: rgb(255 255 255 / 0.55);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.9), 0 12px 30px -16px rgb(77 93 224 / 0.6);
+}
+.memory-detail {
+  background: rgb(255 255 255 / 0.62);
+  box-shadow: inset 0 1px 0 #fff, 0 0 0 1px rgb(169 198 255 / 0.5);
+  backdrop-filter: blur(12px);
+}
+
+.sparkle {
+  color: #fff;
+  filter: drop-shadow(0 0 3px rgb(169 198 255 / 0.9)) drop-shadow(0 0 6px rgb(242 92 192 / 0.45));
+  opacity: 0.85;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .sparkle {
+    animation: twinkle 3.2s ease-in-out infinite;
+  }
+}
+
+@keyframes twinkle {
+  0%, 100% { transform: scale(0.4) rotate(0deg); opacity: 0.2; }
+  50% { transform: scale(1) rotate(45deg); opacity: 0.95; }
 }

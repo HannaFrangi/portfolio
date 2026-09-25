@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useRef, type RefObject } from "react";
+import { Suspense, useEffect, useRef, type RefObject } from "react";
 import * as THREE from "three";
 import { useFrame, useThree } from "@react-three/fiber";
 import { PerspectiveCamera, useTexture, View } from "@react-three/drei";
@@ -17,7 +17,22 @@ import {
   scrollProgress,
   sectionProgress,
 } from "./kit";
-import { Blob, Donut, Laptop, Orbit, Phone, Robot, Sphere, Tablet, useReevuScreen, type RobotDrive } from "./pieces";
+import {
+  Blob,
+  Car,
+  Donut,
+  Laptop,
+  LogoBadge,
+  Orbit,
+  Phone,
+  Pod,
+  Robot,
+  Sphere,
+  Tablet,
+  useReevuScreen,
+  type CarDrive,
+  type RobotDrive,
+} from "./pieces";
 
 const damp = (from: number, to: number, dt: number, rate = 5) => from + (to - from) * (1 - Math.exp(-dt * rate));
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
@@ -64,10 +79,14 @@ function HeroScene() {
   const mid = useRef<THREE.Group>(null);
   const front = useRef<THREE.Group>(null);
   const root = useRef<THREE.Group>(null);
+  const car = useRef<THREE.Group>(null);
+  const carDrive = useRef<CarDrive>({ speed: 0, lights: 1 });
+  const pod = useRef<THREE.Group>(null);
   const size = useThree((s) => s.size);
 
   useFrame((state, delta) => {
     const dt = Math.min(delta, 1 / 30);
+    const time = state.clock.elapsedTime;
     // The hero leaves over one viewport of scroll.
     const out = motion.reduced ? 0 : clamp01(window.scrollY / window.innerHeight);
     const intro = motion.reduced ? 1 : easeOut(clamp01(state.clock.elapsedTime / 1.4));
@@ -90,6 +109,26 @@ function HeroScene() {
       g.scale.set(damp(g.scale.x, s, dt, 8), damp(g.scale.y, s, dt, 8), 1);
     }
     if (mid.current && !motion.reduced) mid.current.rotation.y = damp(mid.current.rotation.y, pointer.sx * 0.08, dt);
+
+    // The car rolls in on load, then drives off to the right as the hero scrolls away,
+    // passing behind the portrait. Wheel spin follows its actual speed.
+    const c = car.current;
+    if (c) {
+      const arrive = motion.reduced ? 1 : easeOut(clamp01((time - 1.3) / 2));
+      const x = lerp(-7.5, -1.3, arrive) + out * 7;
+      carDrive.current.speed = dt > 0 ? (x - c.position.x) / dt : 0;
+      c.position.x = x;
+    }
+
+    // The pod lifts off the horizon behind the portrait and drifts up and out, on a loop.
+    const pd = pod.current;
+    if (pd) {
+      const cycle = motion.reduced ? 0.15 : ((time + 4) % 22) / 22;
+      const fly = easeInOut(clamp01(cycle / 0.6));
+      pd.position.set(lerp(1.1, 4.8, fly), lerp(-1.25, 1.35, fly) + Math.sin(time * 2) * 0.03, -4.5);
+      pd.rotation.set(0.15, time * 0.6, lerp(0, -0.25, fly));
+      pd.visible = cycle < 0.62;
+    }
     // The blobs lean in toward the camera as the visitor leaves; the portrait holds its
     // size so its faded bottom never crosses the edge of the hero's 3D box.
     if (root.current) root.current.scale.setScalar(Math.min(1, (size.width / size.height) * 0.9 + 0.2));
@@ -111,6 +150,12 @@ function HeroScene() {
           <Portrait />
         </Suspense>
         <Orbit radius={1.9} position={[0, 0.35, 0]} tilt={[1.3, 0.06, 0.3]} speed={0.35} delay={0.9} />
+      </group>
+      <group ref={pod} scale={0.32}>
+        <Pod />
+      </group>
+      <group ref={car} position={[-7.5, -1.75, -0.9]} rotation-y={-0.12} scale={0.6}>
+        <Car drive={carDrive} />
       </group>
       <group ref={front}>
         {/* covers the photo's own crop on the right arm */}
@@ -175,8 +220,9 @@ function FeaturedScene({ spot, screen }: { spot: RefObject<HTMLElement | null>; 
 
   return (
     <>
-      <Donut position={[-2.1, 1.4, -1.8]} rotation={[0.9, 0.2, 0]} scale={0.55} color={palette.sand} />
-      <Blob seed={7} position={[2.2, 1.35, -2]} scale={0.95} color={palette.sage} />
+      {/* The client's logo assembles itself as the tablet swings round, then floats top-left. */}
+      <LogoBadge assemble={() => span(progress.current, 0.03, 0.24)} position={[1.3, 0.85, 0.9]} scale={1.05} />
+      <Blob seed={7} position={[2.3, 0.4, -2.4]} scale={0.95} color={palette.sage} />
       <Blob seed={8} position={[-2.3, -1.6, 0.4]} scale={0.45} color={palette.moss} />
       <group ref={tablet}>
         <Suspense fallback={null}>
@@ -266,6 +312,57 @@ function DeviceScene({ project, spot }: { project: Project; spot: RefObject<HTML
   );
 }
 
+/* ------------------------------------------------------- memory card icon */
+
+/**
+ * Soft Club works browser: each project's device spins on a pedestal like a PS2
+ * memory-card save icon. The selected one grows and spins faster; screens idle-scroll.
+ */
+function IconScene({ project, selected }: { project: Project; selected: boolean }) {
+  const spin = useRef<THREE.Group>(null);
+  const reevu = useReevuScreen();
+  const idle = useRef(0);
+  useFrame((state, delta) => {
+    const g = spin.current;
+    if (!g) return;
+    const dt = Math.min(delta, 1 / 30);
+    const t = motion.reduced ? 0 : state.clock.elapsedTime;
+    // Sway rather than spin, so the live site on each screen stays in view; the
+    // selected save swings wider and livelier, like the highlighted PS2 icon.
+    const sway = selected ? Math.sin(t * 1.3) * 0.75 : Math.sin(t * 0.7) * 0.35;
+    g.rotation.y = damp(g.rotation.y, motion.reduced ? -0.25 : sway, dt, 4);
+    g.position.y = damp(g.position.y, (selected ? 0.25 : 0) + Math.sin(t * 1.6) * 0.08, dt, 6);
+    g.scale.setScalar(damp(g.scale.x, selected ? 1.08 : 0.84, dt, 6));
+    idle.current = motion.reduced ? 0.2 : (Math.sin(t * 0.35) + 1) / 2;
+  });
+  const scroll = () => idle.current;
+  // Tilted toward the camera so the glowing pedestal reads as a disc, not a line.
+  return (
+    <group rotation-x={0.32} position={[0, 0.2, 0]}>
+      {/* pedestal: a glowing jelly disc */}
+      <mesh position={[0, -1.55, 0]} rotation-x={-Math.PI / 2}>
+        <circleGeometry args={[1.5, 64]} />
+        <meshBasicMaterial color={selected ? "#bcd2ff" : "#dfe6fb"} transparent opacity={0.85} toneMapped={false} />
+      </mesh>
+      <Orbit radius={1.55} position={[0, -1.5, 0]} tilt={[Math.PI / 2, 0, 0]} speed={selected ? 1.2 : 0.4} planetSize={0.07} />
+      <group ref={spin}>
+        <Suspense fallback={null}>
+          {project.device === "phones" && <Phone src={project.screen} scroll={scroll} position={[0, -0.15, 0]} scale={0.92} />}
+          {project.device === "laptop" && <Laptop src={project.screen} scroll={scroll} position={[0, -1.05, -0.75]} scale={0.95} />}
+          {project.device === "tablet" && (
+            <Tablet
+              src={project.screen === "reevu" ? undefined : project.screen}
+              texture={project.screen === "reevu" ? reevu : undefined}
+              scroll={scroll}
+              scale={0.95}
+            />
+          )}
+        </Suspense>
+      </group>
+    </group>
+  );
+}
+
 /* --------------------------------------------------------------- closing */
 
 const MOONS = [
@@ -283,6 +380,8 @@ function ClosingScene({ spot }: { spot: RefObject<HTMLElement | null> }) {
   const planet = useRef<THREE.Group>(null);
   const moons = useRef<(THREE.Group | null)[]>([]);
   const gather = useRef(0);
+  const car = useRef<THREE.Group>(null);
+  const carDrive = useRef<CarDrive>({ speed: 0, lights: 1 });
 
   useFrame((state, delta) => {
     const dt = Math.min(delta, 1 / 30);
@@ -298,6 +397,14 @@ function ClosingScene({ spot }: { spot: RefObject<HTMLElement | null> }) {
     if (planet.current) {
       planet.current.rotation.y = t * 0.15;
       planet.current.position.x = damp(planet.current.position.x, motion.reduced ? 0 : pointer.sx * 0.2, dt);
+    }
+    // The car from the hero pulls up and parks by the planet; headlights blink once it stops.
+    const c = car.current;
+    if (c) {
+      const x = lerp(-8, -3.1, easeOut(clamp01(gather.current * 1.15)));
+      carDrive.current.speed = dt > 0 ? (x - c.position.x) / dt : 0;
+      carDrive.current.lights = Math.abs(carDrive.current.speed) < 0.05 ? (Math.sin(t * 3) > 0 ? 1 : 0.2) : 1;
+      c.position.x = x;
     }
     MOONS.forEach((m, i) => {
       const moon = moons.current[i];
@@ -317,12 +424,90 @@ function ClosingScene({ spot }: { spot: RefObject<HTMLElement | null> }) {
         <Blob seed={11} position={[0, 0, 0]} scale={1.1} color={palette.moss} amount={0.1} speed={0.5} />
         <Orbit radius={1.85} tilt={[1.3, 0, 0.25]} speed={0.3} />
       </group>
+      <group ref={car} position={[-8, -1.45, 0.6]} rotation-y={-0.35} scale={0.6}>
+        <Car drive={carDrive} />
+      </group>
       {MOONS.map((m, i) => (
         <group key={m.seed} ref={(el) => void (moons.current[i] = el)}>
           <Blob seed={m.seed} position={[0, 0, 0]} scale={m.size} color={m.color} amount={0.18} />
         </group>
       ))}
     </>
+  );
+}
+
+/* ------------------------------------------------------------ robot buddy */
+
+/**
+ * A mini robot that lives in the corner of the screen. It watches the cursor, waves
+ * when a new section arrives, hops when you hover a link, and dozes off when idle.
+ */
+function BuddyScene() {
+  const hop = useRef<THREE.Group>(null);
+  const drive = useRef<RobotDrive>({ walking: 0, waving: 0, lookX: 0, lookY: 0, sleep: 0 });
+  const state = useRef({ section: -1, waveUntil: 0, hopAt: -10, lastActive: 0, frame: 0, show: 0 });
+
+  useEffect(() => {
+    const s = state.current;
+    const wake = () => (s.lastActive = performance.now());
+    const onOver = (e: PointerEvent) => {
+      if ((e.target as Element | null)?.closest("a, button")) s.hopAt = performance.now();
+    };
+    window.addEventListener("pointermove", wake, { passive: true });
+    window.addEventListener("scroll", wake, { passive: true });
+    window.addEventListener("keydown", wake);
+    window.addEventListener("pointerover", onOver, { passive: true });
+    wake();
+    return () => {
+      window.removeEventListener("pointermove", wake);
+      window.removeEventListener("scroll", wake);
+      window.removeEventListener("keydown", wake);
+      window.removeEventListener("pointerover", onOver);
+    };
+  }, []);
+
+  useFrame((_, delta) => {
+    const s = state.current;
+    const d = drive.current;
+    const now = performance.now();
+    const dt = Math.min(delta, 1 / 30);
+    if (motion.reduced) {
+      if (hop.current) hop.current.position.y = window.scrollY > window.innerHeight * 0.6 ? -1.55 : -6;
+      return;
+    }
+
+    // Which section holds the middle of the screen? Checked every few frames.
+    if (s.frame++ % 6 === 0) {
+      const mid = window.innerHeight / 2;
+      const sections = document.querySelectorAll("main > section");
+      let idx = -1;
+      sections.forEach((el, i) => {
+        const r = el.getBoundingClientRect();
+        if (r.top <= mid && r.bottom > mid && getComputedStyle(el).display !== "none") idx = i;
+      });
+      if (idx !== s.section) {
+        if (s.section !== -1 && idx !== -1) s.waveUntil = now + 1800;
+        s.section = idx;
+      }
+    }
+
+    // It sits bottom-right, so "looking at the cursor" is relative to that corner.
+    d.lookX = clamp01((pointer.x + 1) / 2) * 2 - 1.6;
+    d.lookY = pointer.y + 0.7;
+    d.sleep = damp(d.sleep ?? 0, now - s.lastActive > 9000 ? 1 : 0, dt, 2);
+    d.waving = damp(d.waving, now < s.waveUntil ? 1 : 0, dt, 6);
+    // Waits below the screen during the hero (so it never covers the call to action),
+    // then pops up once the visitor scrolls on.
+    s.show = damp(s.show, window.scrollY > window.innerHeight * 0.6 ? 1 : 0, dt, 5);
+    const k = (now - s.hopAt) / 450;
+    if (hop.current)
+      hop.current.position.y = -1.55 - (1 - s.show) * 4 + (k >= 0 && k < 1 ? Math.sin(Math.PI * k) * 0.45 : 0);
+  });
+
+  return (
+    <group ref={hop} position={[0, -5.5, 0]} rotation-y={-0.35}>
+      <Robot drive={drive} />
+    </group>
   );
 }
 
@@ -378,6 +563,22 @@ export function DeviceSpot({ className, project }: { className: string; project:
   return (
     <Spot className={className} camera={7} spotRef={ref}>
       <DeviceScene project={project} spot={ref} />
+    </Spot>
+  );
+}
+
+export function MemoryIcon({ className, project, selected }: { className: string; project: Project; selected: boolean }) {
+  return (
+    <Spot className={className} camera={6.2}>
+      <IconScene project={project} selected={selected} />
+    </Spot>
+  );
+}
+
+export function BuddySpot({ className }: { className: string }) {
+  return (
+    <Spot className={className} camera={7}>
+      <BuddyScene />
     </Spot>
   );
 }

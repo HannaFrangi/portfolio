@@ -1,9 +1,12 @@
 import { Fragment } from "react";
 import Image from "next/image";
+import MemoryCard from "@/components/MemoryCard";
 import Reveal from "@/components/Reveal";
 import ScrollDriver from "@/components/ScrollDriver";
 import StageMount from "@/components/StageMount";
-import { ClosingSpot, DeviceSpot, FeaturedSpot, HeroSpot } from "@/components/three/scenes";
+import ThemeToggle from "@/components/ThemeToggle";
+import ThreadPlane from "@/components/ThreadPlane";
+import { BuddySpot, ClosingSpot, DeviceSpot, FeaturedSpot, HeroSpot } from "@/components/three/scenes";
 import {
   certificates,
   clients,
@@ -63,6 +66,28 @@ function Kinetic({ text, className, offset = 0 }: { text: string; className: str
   );
 }
 
+/** Soft Club only: little four-point stars twinkling across the page. */
+function Sparkles() {
+  const stars = [
+    [8, 18, 14, 0], [22, 64, 10, 1.2], [37, 30, 8, 2.1], [52, 82, 12, 0.6], [66, 12, 9, 1.7],
+    [78, 48, 14, 2.6], [90, 26, 8, 0.9], [14, 88, 9, 3.1], [45, 52, 7, 1.4], [84, 76, 11, 2.2],
+  ];
+  return (
+    <div aria-hidden className="theme-club-only pointer-events-none fixed inset-0 z-20">
+      {stars.map(([x, y, size, delay], i) => (
+        <svg
+          key={i}
+          viewBox="0 0 20 20"
+          className="sparkle absolute"
+          style={{ left: `${x}%`, top: `${y}%`, width: size * 1.6, animationDelay: `${delay}s` }}
+        >
+          <path d="M10 0 C11 7 13 9 20 10 C13 11 11 13 10 20 C9 13 7 11 0 10 C7 9 9 7 10 0Z" fill="currentColor" />
+        </svg>
+      ))}
+    </div>
+  );
+}
+
 function Nav() {
   const links = [
     ["Work", "#work"],
@@ -88,9 +113,12 @@ function Nav() {
             </li>
           ))}
         </ul>
-        <a href={person.github} target="_blank" rel="noopener noreferrer" className="pill pill-solid !py-1.5">
-          GitHub <Arrow />
-        </a>
+        <div className="flex items-center gap-2">
+          <ThemeToggle />
+          <a href={person.github} target="_blank" rel="noopener noreferrer" className="pill pill-solid !py-1.5 max-sm:hidden">
+            GitHub <Arrow />
+          </a>
+        </div>
       </nav>
     </header>
   );
@@ -238,7 +266,7 @@ function Featured() {
 /** Pinned on desktop: the cards ride a sideways rail. Phones get a normal vertical stack. */
 function Works() {
   return (
-    <section data-section data-progress="pin" aria-labelledby="works-title" className="relative md:h-[220vh]">
+    <section data-section data-progress="pin" aria-labelledby="works-title" className="theme-sage-only relative md:h-[220vh]">
       <div className="py-20 md:sticky md:top-0 md:flex md:h-screen md:flex-col md:justify-center md:overflow-hidden md:py-0">
         <div data-rail className="flex flex-col gap-6 px-4 will-change-transform md:flex-row md:items-stretch md:px-[6vw]">
           <div {...reveal(0)} className="flex shrink-0 flex-col justify-center md:w-[26vw] md:pr-4">
@@ -326,8 +354,9 @@ function Process() {
                 <path className="thread-mask" pathLength={1} d="M0 100 C 200 -10, 300 -10, 500 60 S 800 130, 1000 20" fill="none" stroke="#fff" strokeWidth="10" />
               </mask>
             </defs>
-            <path d="M0 100 C 200 -10, 300 -10, 500 60 S 800 130, 1000 20" fill="none" stroke="#959D69" strokeWidth="2" strokeDasharray="6 8" mask="url(#thread-draw)" />
+            <path id="thread-path" d="M0 100 C 200 -10, 300 -10, 500 60 S 800 130, 1000 20" fill="none" stroke="var(--sage)" strokeWidth="2" strokeDasharray="6 8" mask="url(#thread-draw)" />
           </svg>
+          <ThreadPlane pathId="thread-path" />
           {process.map((p, i) => (
             <li
               key={p.step}
@@ -475,7 +504,7 @@ function Closing() {
           </a>
         </div>
       </div>
-      <footer className="mx-auto mt-20 flex max-w-6xl flex-wrap items-center justify-between gap-3 border-t border-sand/50 pt-6 text-xs text-ink-soft">
+      <footer className="mx-auto mt-20 flex max-w-6xl flex-wrap items-center justify-between gap-3 border-t border-sand/50 pt-6 text-xs text-ink-soft max-md:pr-28 md:pr-40">
         <span>
           © {new Date().getFullYear()} {person.name}
         </span>
@@ -493,6 +522,9 @@ export default function Home() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
       />
       <StageMount />
+      <Sparkles />
+      {/* Robot buddy: lives in the corner, drawn by the shared canvas. */}
+      <BuddySpot className="pointer-events-none fixed bottom-2 right-1 z-30 h-[140px] w-[110px] md:bottom-4 md:right-4 md:h-[190px] md:w-[150px]" />
       <ScrollDriver />
       <Reveal />
       <Nav />
@@ -501,6 +533,7 @@ export default function Home() {
         <Clients />
         <Featured />
         <Works />
+        <MemoryCard works={works} />
         <Process />
         <About />
         <Toolkit />

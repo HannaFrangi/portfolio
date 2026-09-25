@@ -4,7 +4,8 @@ import { useMemo, useRef } from "react";
 import * as THREE from "three";
 import { useFrame, type ThreeElements } from "@react-three/fiber";
 import { RoundedBox, useTexture } from "@react-three/drei";
-import { FinishMaterial, blobGeometry, clamp01, easeOutBack, motion, palette, type Finish } from "./kit";
+import { textureFor, useQuality } from "@/lib/quality";
+import { FinishMaterial, blobGeometry, clamp01, easeOutBack, motion, palette, useDetail, useSwatch, type Finish } from "./kit";
 
 type V3 = [number, number, number];
 
@@ -35,7 +36,8 @@ export function Blob({
   delay?: number;
 }) {
   const mesh = useRef<THREE.Mesh>(null);
-  const geometry = useMemo(() => blobGeometry(seed, amount), [seed, amount]);
+  const detail = useDetail();
+  const geometry = useMemo(() => blobGeometry(seed, amount, detail.blob), [seed, amount, detail.blob]);
   useFrame((state) => {
     const m = mesh.current;
     if (!m) return;
@@ -67,12 +69,13 @@ export function Sphere({
   delay?: number;
 }) {
   const mesh = useRef<THREE.Mesh>(null);
+  const detail = useDetail();
   useFrame((state) => {
     if (mesh.current && delay !== undefined) mesh.current.scale.setScalar(scale * pop(state.clock.elapsedTime, delay));
   });
   return (
     <mesh ref={mesh} position={position} scale={delay === undefined ? scale : 0}>
-      <sphereGeometry args={[1, 64, 48]} />
+      <sphereGeometry args={[1, detail.sphere, Math.round(detail.sphere * 0.75)]} />
       <FinishMaterial finish={finish} color={color} />
     </mesh>
   );
@@ -189,7 +192,8 @@ function ScrollingScreen({
 }
 
 function LoadedScreen({ src, aspect, scroll }: { src: string; aspect: number; scroll?: () => number }) {
-  const texture = useTexture(src, (t) => {
+  const quality = useQuality();
+  const texture = useTexture(textureFor(src, quality), (t) => {
     const tex = t as THREE.Texture;
     tex.colorSpace = THREE.SRGBColorSpace;
     tex.anisotropy = 8;
@@ -290,7 +294,15 @@ export function Laptop({ src, scroll, lean = -0.28, ...props }: DeviceProps & { 
 /* -------------------------------------------------------------- robot */
 
 /** Mutable drive for the robot, written by the scene each frame. */
-export type RobotDrive = { walking: number; waving: number };
+export type RobotDrive = {
+  walking: number;
+  waving: number;
+  /** Optional gaze (-1..1); when set, the head tracks it instead of idling. */
+  lookX?: number;
+  lookY?: number;
+  /** 0 awake, 1 asleep: head droops, eyes dim, slow breathing. */
+  sleep?: number;
+};
 
 /** A 1970s toy robot: cream shell, visor, orange eyes, chrome antenna. Walks and waves on cue. */
 export function Robot({ drive, ...props }: { drive?: { current: RobotDrive } } & ThreeElements["group"]) {
@@ -307,14 +319,29 @@ export function Robot({ drive, ...props }: { drive?: { current: RobotDrive } } &
     const stride = Math.sin(t * 10) * 0.55 * walking;
     if (legL.current) legL.current.rotation.x = stride;
     if (legR.current) legR.current.rotation.x = -stride;
-    if (body.current) body.current.position.y = Math.abs(Math.sin(t * 10)) * 0.06 * walking;
+    const sleep = drive?.current.sleep ?? 0;
+    if (body.current) {
+      body.current.position.y = Math.abs(Math.sin(t * 10)) * 0.06 * walking;
+      body.current.scale.y = 1 + Math.sin(t * 1.6) * 0.015 * sleep;
+    }
     // Arm swings with the walk, then lifts into a wave.
     if (arm.current) arm.current.rotation.z = 0.25 + waving * (2.05 + Math.sin(t * 5) * 0.4) - stride * 0.4 * (1 - waving);
-    if (head.current && !motion.reduced) head.current.rotation.y = Math.sin(t * 0.7) * 0.25 * (1 - walking);
-    if (eyes.current) eyes.current.emissiveIntensity = Math.sin(t * 1.3) > 0.97 ? 0.1 : 1.6;
+    const h = head.current;
+    if (h && !motion.reduced) {
+      const d = drive?.current;
+      if (d?.lookX !== undefined) {
+        h.rotation.y += (d.lookX * 0.7 * (1 - sleep) - h.rotation.y) * 0.12;
+        h.rotation.x += ((d.lookY ?? 0) * -0.35 * (1 - sleep) + sleep * 0.45 - h.rotation.x) * 0.12;
+      } else {
+        h.rotation.y = Math.sin(t * 0.7) * 0.25 * (1 - walking);
+      }
+    }
+    if (eyes.current) eyes.current.emissiveIntensity = (Math.sin(t * 1.3) > 0.97 ? 0.1 : 1.6) * (1 - sleep * 0.92);
   });
-  const shell = <meshPhysicalMaterial color={palette.cream} roughness={0.45} clearcoat={0.6} clearcoatRoughness={0.3} />;
-  const trim = <meshPhysicalMaterial color={palette.moss} roughness={0.8} sheen={1} sheenColor="#cfdcb0" />;
+  const cream = useSwatch(palette.cream);
+  const accent = useSwatch(palette.accent);
+  const shell = <meshPhysicalMaterial color={cream} roughness={0.45} clearcoat={0.6} clearcoatRoughness={0.3} />;
+  const trim = <FinishMaterial finish="flock" color={palette.moss} />;
   const chrome = <meshStandardMaterial color={palette.chrome} metalness={1} roughness={0.15} />;
   return (
     <group {...props}>
@@ -333,7 +360,7 @@ export function Robot({ drive, ...props }: { drive?: { current: RobotDrive } } &
         <RoundedBox args={[0.7, 0.5, 0.05]} radius={0.06} position={[0, 1.33, 0.41]}>{trim}</RoundedBox>
         <mesh position={[0.18, 1.33, 0.44]} rotation-x={Math.PI / 2}>
           <cylinderGeometry args={[0.08, 0.08, 0.04, 24]} />
-          <meshStandardMaterial color={palette.accent} emissive={palette.accent} emissiveIntensity={0.4} />
+          <meshStandardMaterial color={accent} emissive={accent} emissiveIntensity={0.4} />
         </mesh>
         <mesh position={[-0.15, 1.33, 0.44]} rotation-x={Math.PI / 2}>
           <cylinderGeometry args={[0.05, 0.05, 0.04, 24]} />
@@ -363,7 +390,7 @@ export function Robot({ drive, ...props }: { drive?: { current: RobotDrive } } &
           {[-0.18, 0.18].map((x) => (
             <mesh key={x} position={[x, 0.02, 0.42]}>
               <sphereGeometry args={[0.07, 24, 16]} />
-              <meshStandardMaterial ref={x < 0 ? eyes : undefined} color={palette.accent} emissive={palette.accent} emissiveIntensity={1.6} toneMapped={false} />
+              <meshStandardMaterial ref={x < 0 ? eyes : undefined} color={accent} emissive={accent} emissiveIntensity={1.6} toneMapped={false} />
             </mesh>
           ))}
           <mesh position={[0, 0.55, 0]}>
@@ -372,7 +399,7 @@ export function Robot({ drive, ...props }: { drive?: { current: RobotDrive } } &
           </mesh>
           <mesh position={[0, 0.78, 0]}>
             <sphereGeometry args={[0.08, 24, 16]} />
-            <meshStandardMaterial color={palette.accent} emissive={palette.accent} emissiveIntensity={0.8} />
+            <meshStandardMaterial color={accent} emissive={accent} emissiveIntensity={0.8} />
           </mesh>
           {[-0.53, 0.53].map((x) => (
             <mesh key={x} position={[x, 0, 0]} rotation-z={Math.PI / 2}>
@@ -394,14 +421,17 @@ export function Robot({ drive, ...props }: { drive?: { current: RobotDrive } } &
  * tall enough to scroll like the real captures.
  */
 export function useReevuScreen() {
+  // Drawn at half resolution on the low tier, like the photographed screens.
+  const k = useQuality() === "low" ? 0.5 : 1;
   return useMemo(() => {
     if (typeof document === "undefined") return undefined;
     const W = 1200, H = 2600;
     const c = document.createElement("canvas");
-    c.width = W;
-    c.height = H;
+    c.width = W * k;
+    c.height = H * k;
     const g = c.getContext("2d");
     if (!g) return undefined;
+    g.scale(k, k);
     const round = (x: number, y: number, w: number, h: number, r: number, fill: string) => {
       g.fillStyle = fill;
       g.beginPath();
@@ -478,5 +508,228 @@ export function useReevuScreen() {
     t.colorSpace = THREE.SRGBColorSpace;
     t.anisotropy = 8;
     return t;
-  }, []);
+  }, [k]);
+}
+
+/* ---------------------------------------------------------------- car */
+
+/** Mutable drive for the car: `speed` spins the wheels, `lights` 0..1 for the headlights. */
+export type CarDrive = { speed: number; lights: number };
+
+/**
+ * A 1970s-future runabout: rounded cream body, glass bubble canopy, a moss racing
+ * stripe, chrome hubcaps and warm headlights. Faces +x. About 1.6 units long.
+ */
+export function Car({ drive, ...props }: { drive?: { current: CarDrive } } & ThreeElements["group"]) {
+  const wheels = useRef<(THREE.Group | null)[]>([]);
+  const body = useRef<THREE.Group>(null);
+  const lamps = useRef<(THREE.MeshStandardMaterial | null)[]>([]);
+  const cream = useSwatch(palette.cream);
+  const glass = useSwatch(palette.sage);
+  useFrame((state, delta) => {
+    const speed = motion.reduced ? 0 : (drive?.current.speed ?? 0);
+    const t = state.clock.elapsedTime;
+    for (const w of wheels.current) if (w) w.rotation.z -= (speed * Math.min(delta, 1 / 30)) / 0.17;
+    // Suspension: a little bounce that grows with speed.
+    if (body.current) body.current.position.y = Math.sin(t * 14) * 0.012 * Math.min(1, Math.abs(speed)) + 0.01;
+    const on = drive?.current.lights ?? 1;
+    for (const l of lamps.current) if (l) l.emissiveIntensity = 0.3 + on * 1.6;
+  });
+  return (
+    <group {...props}>
+      <group ref={body}>
+        <RoundedBox args={[1.55, 0.42, 0.74]} radius={0.2} smoothness={6} position={[0, 0.12, 0]}>
+          <meshPhysicalMaterial color={cream} roughness={0.35} clearcoat={0.8} clearcoatRoughness={0.2} />
+        </RoundedBox>
+        <RoundedBox args={[1.57, 0.07, 0.76]} radius={0.03} position={[0, 0.1, 0]}>
+          <FinishMaterial finish="flock" color={palette.moss} />
+        </RoundedBox>
+        {/* bubble canopy */}
+        <mesh position={[-0.1, 0.33, 0]} scale={[1.25, 0.72, 0.85]}>
+          <sphereGeometry args={[0.38, 48, 24, 0, Math.PI * 2, 0, Math.PI / 2]} />
+          <meshPhysicalMaterial color={glass} roughness={0.05} metalness={0.1} clearcoat={1} transparent opacity={0.6} />
+        </mesh>
+        {/* tail fin */}
+        <mesh position={[-0.66, 0.42, 0]} rotation-z={0.5}>
+          <boxGeometry args={[0.22, 0.2, 0.04]} />
+          <FinishMaterial finish="chrome" color={palette.chrome} />
+        </mesh>
+        {/* bumpers */}
+        {[0.78, -0.78].map((x) => (
+          <mesh key={x} position={[x, 0.02, 0]} rotation-x={Math.PI / 2}>
+            <capsuleGeometry args={[0.04, 0.6, 6, 12]} />
+            <FinishMaterial finish="chrome" color={palette.chrome} />
+          </mesh>
+        ))}
+        {/* headlights */}
+        {[0.22, -0.22].map((z, i) => (
+          <mesh key={z} position={[0.78, 0.16, z]}>
+            <sphereGeometry args={[0.06, 20, 12]} />
+            <meshStandardMaterial
+              ref={(m) => void (lamps.current[i] = m)}
+              color="#fff4d6"
+              emissive="#ffe7a8"
+              emissiveIntensity={1.6}
+              toneMapped={false}
+            />
+          </mesh>
+        ))}
+      </group>
+      {/* wheels, axles along z */}
+      {[
+        [0.5, 0.36], [0.5, -0.36], [-0.5, 0.36], [-0.5, -0.36],
+      ].map(([x, z], i) => (
+        <group key={i} ref={(g) => void (wheels.current[i] = g)} position={[x, -0.1, z]}>
+          <mesh rotation-x={Math.PI / 2}>
+            <cylinderGeometry args={[0.17, 0.17, 0.12, 28]} />
+            <meshStandardMaterial color="#2b2f25" roughness={0.8} />
+          </mesh>
+          <mesh rotation-x={Math.PI / 2} position={[0, 0, z > 0 ? 0.061 : -0.061]}>
+            <cylinderGeometry args={[0.09, 0.09, 0.01, 20]} />
+            <FinishMaterial finish="chrome" color={palette.chrome} />
+          </mesh>
+          {/* a spoke so the spin is visible */}
+          <mesh position={[0, 0, z > 0 ? 0.066 : -0.066]}>
+            <boxGeometry args={[0.16, 0.025, 0.005]} />
+            <meshStandardMaterial color="#2b2f25" />
+          </mesh>
+        </group>
+      ))}
+    </group>
+  );
+}
+
+/* ---------------------------------------------------------------- pod */
+
+/** The Futuro pod from the hero photo: a white saucer with a window band, legs and a soft glow. */
+export function Pod(props: ThreeElements["group"]) {
+  const white = useSwatch(palette.cream);
+  const glow = useSwatch(palette.accent);
+  return (
+    <group {...props}>
+      <mesh scale={[1, 0.42, 1]}>
+        <sphereGeometry args={[0.6, 48, 24]} />
+        <meshPhysicalMaterial color={white} roughness={0.3} clearcoat={0.9} />
+      </mesh>
+      <mesh rotation-x={Math.PI / 2}>
+        <torusGeometry args={[0.56, 0.05, 12, 48]} />
+        <meshPhysicalMaterial color="#27304a" roughness={0.1} clearcoat={1} />
+      </mesh>
+      {[0, 1, 2, 3].map((i) => {
+        const a = (i / 4) * Math.PI * 2 + Math.PI / 4;
+        return (
+          <mesh key={i} position={[Math.cos(a) * 0.38, -0.36, Math.sin(a) * 0.38]} rotation={[Math.sin(a) * 0.3, 0, -Math.cos(a) * 0.3]}>
+            <cylinderGeometry args={[0.02, 0.02, 0.3, 8]} />
+            <FinishMaterial finish="chrome" color={palette.chrome} />
+          </mesh>
+        );
+      })}
+      <mesh position={[0, -0.24, 0]} scale={[1, 0.3, 1]}>
+        <sphereGeometry args={[0.16, 20, 12]} />
+        <meshStandardMaterial color={glow} emissive={glow} emissiveIntensity={1.2} toneMapped={false} />
+      </mesh>
+    </group>
+  );
+}
+
+/* ---------------------------------------------------------- robostars logo */
+
+// Traced from the client's logo (722 x 1134 px). Coordinates in source pixels, y down.
+const LOGO_W = 722, LOGO_H = 1134;
+const LOGO_BLUE = "#1791c8";
+const LOGO_ORANGE = "#f58220";
+
+const px = (x: number, y: number) => new THREE.Vector2((x - LOGO_W / 2) / LOGO_H, -(y - LOGO_H / 2) / LOGO_H);
+
+function polygon(points: [number, number][]) {
+  const shape = new THREE.Shape();
+  points.forEach(([x, y], i) => {
+    const p = px(x, y);
+    if (i === 0) shape.moveTo(p.x, p.y);
+    else shape.lineTo(p.x, p.y);
+  });
+  shape.closePath();
+  return shape;
+}
+
+function circle(cx: number, cy: number, r: number) {
+  const c = px(cx, cy);
+  const s = new THREE.Shape();
+  s.absarc(c.x, c.y, r / LOGO_H, 0, Math.PI * 2, false);
+  return s;
+}
+
+function logoParts() {
+  const head = polygon([[73, 208], [643, 208], [515, 438], [200, 438]]);
+  for (const [cx, cy] of [[291, 313], [433, 313]]) {
+    const hole = new THREE.Path();
+    const c = px(cx, cy);
+    hole.absarc(c.x, c.y, 31 / LOGO_H, 0, Math.PI * 2, true);
+    head.holes.push(hole);
+  }
+  const antenna = [polygon([[340, 60], [378, 60], [378, 212], [340, 212]]), circle(358, 40, 40)];
+  const leftArm = polygon([[0, 312], [97, 312], [182, 466], [312, 466], [259, 598], [163, 598]]);
+  const rightArm = polygon([[722, 312], [623, 312], [538, 466], [408, 466], [461, 598], [557, 598]]);
+  const star = polygon([
+    [357, 488], [402, 627], [550, 629], [433, 715], [476, 855],
+    [358, 770], [240, 855], [283, 715], [167, 629], [313, 628],
+  ]);
+  const point = polygon([[358, 828], [457, 906], [357, 1128], [257, 897]]);
+  const extrude = (shapes: THREE.Shape | THREE.Shape[]) =>
+    new THREE.ExtrudeGeometry(shapes, { depth: 0.07, bevelEnabled: true, bevelThickness: 0.018, bevelSize: 0.01, bevelSegments: 3, curveSegments: 24 });
+  // Each part flies in from its own direction, like a robot being assembled.
+  return [
+    { geo: extrude(antenna), color: LOGO_BLUE, from: [0, 1.2, 0.3] },
+    { geo: extrude(head), color: LOGO_BLUE, from: [0, 0.8, -0.6] },
+    { geo: extrude(leftArm), color: LOGO_BLUE, from: [-1.1, 0.1, 0.2] },
+    { geo: extrude(rightArm), color: LOGO_BLUE, from: [1.1, 0.1, 0.2] },
+    { geo: extrude(star), color: LOGO_ORANGE, from: [0, -0.2, 1.2], star: true },
+    { geo: extrude(point), color: LOGO_BLUE, from: [0, -1.1, 0] },
+  ] as { geo: THREE.ExtrudeGeometry; color: string; from: V3; star?: boolean }[];
+}
+
+/**
+ * The RoboStars logo as a glossy 3D badge. `assemble()` (0..1) flies the pieces in and
+ * clicks them together; once built, the star spins on its own axis and the badge floats.
+ */
+export function LogoBadge({ assemble, ...props }: { assemble: () => number } & ThreeElements["group"]) {
+  const parts = useMemo(() => logoParts(), []);
+  const refs = useRef<(THREE.Mesh | null)[]>([]);
+  const whole = useRef<THREE.Group>(null);
+  // Star pivots around its own centre, not the badge origin.
+  const starCentre = useMemo(() => px(358, 690), []);
+  useFrame((state) => {
+    const a = motion.reduced ? 1 : clamp01(assemble());
+    const t = state.clock.elapsedTime;
+    parts.forEach((part, i) => {
+      const m = refs.current[i];
+      if (!m) return;
+      // Stagger: antenna first, point last; each snaps in with a little overshoot.
+      const k = Math.max(0, easeOutBack(clamp01(a * 1.6 - i * 0.12)));
+      const off = 1 - k;
+      m.position.set(part.from[0] * off, part.from[1] * off, part.from[2] * off);
+      m.rotation.set(part.from[1] * off * 1.5, part.from[0] * off * 2, 0);
+      if (part.star && a >= 1 && !motion.reduced) {
+        m.rotation.y = t * 1.4;
+        m.position.x = starCentre.x - starCentre.x * Math.cos(t * 1.4);
+        m.position.z = starCentre.x * Math.sin(t * 1.4);
+      }
+      m.visible = a > i * 0.075;
+    });
+    if (whole.current && !motion.reduced) {
+      whole.current.position.y = Math.sin(t * 1.1) * 0.05;
+      whole.current.rotation.y = Math.sin(t * 0.6) * 0.35;
+    }
+  });
+  return (
+    <group {...props}>
+      <group ref={whole}>
+        {parts.map((part, i) => (
+          <mesh key={i} ref={(m) => void (refs.current[i] = m)} geometry={part.geo} position={[0, 0, -0.035]}>
+            <meshPhysicalMaterial color={part.color} roughness={0.25} clearcoat={1} clearcoatRoughness={0.1} />
+          </mesh>
+        ))}
+      </group>
+    </group>
+  );
 }

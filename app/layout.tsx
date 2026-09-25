@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import localFont from "next/font/local";
+import { themeBootScript } from "@/lib/theme-boot";
 import "./globals.css";
 
 // Self-hosted: the Google Fonts download is too slow on this network for next/font/google.
@@ -19,6 +20,13 @@ const display = localFont({
     { path: "./fonts/Syne-800.woff2", weight: "800" },
   ],
   variable: "--font-syne",
+});
+
+// Soft Club theme display face: wide, rounded, very Y2K.
+const y2k = localFont({
+  src: "./fonts/Unbounded-Variable.woff2",
+  weight: "400 800",
+  variable: "--font-unbounded",
 });
 
 const geistSans = Geist({
@@ -51,8 +59,13 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${serif.variable} ${display.variable} ${geistSans.variable} ${geistMono.variable} antialiased`}
+      data-theme="sage"
+      suppressHydrationWarning
+      className={`${serif.variable} ${display.variable} ${y2k.variable} ${geistSans.variable} ${geistMono.variable} antialiased`}
     >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeBootScript }} />
+      </head>
       <body>{children}</body>
     </html>
   );
