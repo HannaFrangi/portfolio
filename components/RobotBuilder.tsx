@@ -40,7 +40,7 @@ export default function RobotBuilder() {
           </h2>
           <p data-reveal className="mt-4 max-w-md leading-7 text-ink-soft">
             I teach kids to build robots at RoboStars. Your turn: drag the pieces onto the outline and they click into
-            place.
+            place. Using a keyboard? &ldquo;Build it for me&rdquo; assembles it in one go.
           </p>
           <p aria-live="polite" className="mt-6 font-display text-lg font-bold text-olive">
             {done ? (
@@ -60,15 +60,16 @@ export default function RobotBuilder() {
               />
             ))}
           </div>
-          <div className="mt-7 flex flex-wrap gap-3">
-            <button type="button" onClick={() => setCommand((c) => ({ type: "scatter", n: c.n + 1 }))} className="pill pill-soft">
-              Scatter pieces
+          {/* Playing is the point: "Scatter" is the button, auto-build is the quiet way out. */}
+          <div className="mt-7 flex flex-wrap items-center gap-5">
+            <button type="button" onClick={() => setCommand((c) => ({ type: "scatter", n: c.n + 1 }))} className="pill pill-solid">
+              {done ? "Build it again" : "Scatter pieces"}
             </button>
             <button
               type="button"
               disabled={done}
               onClick={() => setCommand((c) => ({ type: "build", n: c.n + 1 }))}
-              className="pill pill-solid disabled:opacity-50"
+              className="link disabled:opacity-40"
             >
               Build it for me
             </button>
@@ -77,10 +78,14 @@ export default function RobotBuilder() {
         {/* touch-none lives on the card (the 3D box passes pointer events through) */}
         <div data-reveal className={`clay relative overflow-hidden ${interactive ? "touch-none" : ""}`}>
           <BuilderSpot
-            className="relative h-[360px] md:h-[460px]"
+            className="relative h-[340px] md:h-[400px]"
             command={command}
             interactive={interactive}
-            onProgress={setPlaced}
+            onProgress={(n) => {
+              setPlaced(n);
+              // The corner robot comes out to celebrate (see BuddyScene).
+              if (n === PIECES) window.dispatchEvent(new Event("robostars:built"));
+            }}
           />
           {coarse &&
             (playing ? (

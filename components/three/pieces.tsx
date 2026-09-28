@@ -5,6 +5,7 @@ import * as THREE from "three";
 import { useFrame, type ThreeElements } from "@react-three/fiber";
 import { RoundedBox, useTexture } from "@react-three/drei";
 import { textureFor, useQuality } from "@/lib/quality";
+import { useTheme } from "@/lib/theme";
 import { FinishMaterial, blobGeometry, clamp01, easeOutBack, motion, palette, useDetail, useSwatch, type Finish } from "./kit";
 
 type V3 = [number, number, number];
@@ -423,6 +424,7 @@ export function Robot({ drive, ...props }: { drive?: { current: RobotDrive } } &
 export function useReevuScreen() {
   // Drawn at half resolution on the low tier, like the photographed screens.
   const k = useQuality() === "low" ? 0.5 : 1;
+  const club = useTheme() === "club";
   return useMemo(() => {
     if (typeof document === "undefined") return undefined;
     const W = 1200, H = 2600;
@@ -504,11 +506,24 @@ export function useReevuScreen() {
       round(1015, y + 40, 110, 44, 22, "#EDE8DC");
     }
 
-    const t = new THREE.CanvasTexture(c);
+    // Soft Club: the same hue shift the generated plates get, so the screen matches the theme.
+    let out: HTMLCanvasElement = c;
+    if (club) {
+      const shifted = document.createElement("canvas");
+      shifted.width = c.width;
+      shifted.height = c.height;
+      const g2 = shifted.getContext("2d");
+      if (g2) {
+        g2.filter = "hue-rotate(150deg) saturate(1.15)";
+        g2.drawImage(c, 0, 0);
+        out = shifted;
+      }
+    }
+    const t = new THREE.CanvasTexture(out);
     t.colorSpace = THREE.SRGBColorSpace;
     t.anisotropy = 8;
     return t;
-  }, [k]);
+  }, [k, club]);
 }
 
 /* ---------------------------------------------------------------- car */

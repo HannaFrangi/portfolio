@@ -26,9 +26,10 @@ export default function MemoryCard({ works }: { works: Project[] }) {
 
   return (
     <section
+      id="memory"
       data-section
       aria-labelledby="memory-title"
-      className="theme-club-only px-4 py-24"
+      className="theme-club-only scroll-mt-24 px-4 py-24"
     >
       <div data-reveal className="memory mx-auto max-w-6xl overflow-hidden rounded-[36px]">
         <header className="flex flex-wrap items-center justify-between gap-3 border-b border-white/50 px-6 py-4 md:px-10">
@@ -38,13 +39,14 @@ export default function MemoryCard({ works }: { works: Project[] }) {
           <p className="font-mono text-xs uppercase tracking-[0.2em] text-ink-soft">Selected works · {works.length} saves</p>
         </header>
 
-        <div role="toolbar" aria-label="Saved projects" onKeyDown={onKey} className="grid grid-cols-3 gap-2 px-3 pt-6 md:gap-6 md:px-10">
+        <div role="toolbar" aria-label="Saved projects" onKeyDown={onKey} className="grid grid-cols-2 gap-2 px-3 pt-6 md:grid-cols-4 md:gap-5 md:px-10">
           {works.map((w, i) => (
             <button
               key={w.id}
               ref={(el) => void (buttons.current[i] = el)}
               type="button"
               aria-pressed={i === active}
+              aria-describedby={i === active ? "memory-detail" : undefined}
               aria-label={`${w.name}, ${w.kind}`}
               tabIndex={i === active ? 0 : -1}
               onMouseEnter={() => setActive(i)}
@@ -61,7 +63,7 @@ export default function MemoryCard({ works }: { works: Project[] }) {
         {/* Detail panel: what the PS2 shows under the icons for the highlighted save. */}
         {/* Not a live region: the focused save's button already names it, and announcing
             every hover would be noise for screen-reader users who also use a mouse. */}
-        <div className="memory-detail mx-3 mb-3 mt-4 grid gap-4 rounded-[26px] p-6 md:mx-10 md:mb-10 md:grid-cols-[1fr_auto] md:items-end md:p-8">
+        <div id="memory-detail" className="memory-detail mx-3 mb-3 mt-4 grid gap-4 rounded-[26px] p-6 md:mx-10 md:mb-10 md:grid-cols-[1fr_auto] md:items-end md:p-8">
           <div>
             <h3 className="font-display text-3xl font-bold tracking-[-0.01em] md:text-4xl">{current.name}</h3>
             <p className="mt-1 text-sm text-ink-soft">

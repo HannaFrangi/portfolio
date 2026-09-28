@@ -58,10 +58,22 @@ const portraitFade = (() => {
   return t;
 })();
 
+/** Sharpens the cut-out's soft edge so the faint light fringe from the original photo drops out. */
+const tightenMatte = (shader: { fragmentShader: string }) => {
+  shader.fragmentShader = shader.fragmentShader.replace(
+    "#include <map_fragment>",
+    "#include <map_fragment>\n  diffuseColor.a = smoothstep(0.35, 0.8, diffuseColor.a);",
+  );
+};
+
 function Portrait() {
   const texture = useTexture("/textures/portrait.png", (t) => {
     (t as THREE.Texture).colorSpace = THREE.SRGBColorSpace;
   });
+  // The static portrait in the page shows until this 3D one exists, then steps aside.
+  useEffect(() => {
+    document.documentElement.dataset.portrait = "3d";
+  }, []);
   const img = texture.image as { width: number; height: number };
   const h = 4.5;
   return (
@@ -70,7 +82,14 @@ function Portrait() {
       {/* The bottom fades into the page like the landscape behind it, instead of ending
           in a hard line where the hero's 3D box is clipped. A low alphaTest still drops
           the empty pixels around the cut-out so they never hide the orbit ring. */}
-      <meshBasicMaterial map={texture} alphaMap={portraitFade} transparent alphaTest={0.02} toneMapped={false} />
+      <meshBasicMaterial
+        map={texture}
+        alphaMap={portraitFade}
+        transparent
+        alphaTest={0.02}
+        toneMapped={false}
+        onBeforeCompile={tightenMatte}
+      />
     </mesh>
   );
 }
@@ -292,7 +311,10 @@ function DeviceScene({ project, spot }: { project: Project; spot: RefObject<HTML
     g.rotation.y = damp(g.rotation.y, (hover ? pointer.sx * 0.3 : Math.sin(t * 0.4) * 0.08) - (1 - e) * 2.4, dt, 6);
     g.rotation.x = damp(g.rotation.x, hover ? -pointer.sy * 0.15 : 0, dt);
     g.position.y = damp(g.position.y, (hover ? 0.18 : 0) - (1 - e) * 1.2, dt);
-    g.scale.setScalar(damp(g.scale.x, (hover ? 1.06 : 1) * lerp(0.6, 1, e), dt));
+    // Narrow panes (the wide feature cards split device | text) get a smaller device so
+    // nothing is cut by the pane's edges.
+    const fit = Math.min(1, state.size.width / state.size.height / 1.35);
+    g.scale.setScalar(damp(g.scale.x, (hover ? 1.06 : 1) * lerp(0.6, 1, e) * fit, dt));
   });
 
   const scroll = () => screenScroll.current;
@@ -304,7 +326,9 @@ function DeviceScene({ project, spot }: { project: Project; spot: RefObject<HTML
         <Suspense fallback={null}>
           {project.device === "phones" && (
             <>
-              <Tablet src="/textures/sms-cleaning-site.jpg" scroll={scroll} position={[-0.55, 0.25, -0.8]} rotation-y={0.35} scale={0.75} />
+              {project.backScreen && (
+                <Tablet src={project.backScreen} scroll={scroll} position={[-0.55, 0.25, -0.8]} rotation-y={0.35} scale={0.75} />
+              )}
               <Phone src={project.screen} scroll={scroll} position={[0.8, -0.1, 0.4]} rotation-y={-0.3} scale={0.95} />
             </>
           )}
@@ -352,7 +376,7 @@ function IconScene({ project, selected }: { project: Project; selected: boolean 
   const scroll = () => idle.current;
   // Tilted toward the camera so the glowing pedestal reads as a disc, not a line.
   return (
-    <group rotation-x={0.32} position={[0, 0.2, 0]}>
+    <group rotation-x={0.32} position={[0, 0.5, 0]} scale={0.9}>
       {/* pedestal: a glowing jelly disc */}
       <mesh position={[0, -1.55, 0]} rotation-x={-Math.PI / 2}>
         <circleGeometry args={[1.5, 64]} />
@@ -460,7 +484,7 @@ function ClosingScene({ spot }: { spot: RefObject<HTMLElement | null> }) {
 function BuddyScene() {
   const hop = useRef<THREE.Group>(null);
   const drive = useRef<RobotDrive>({ walking: 0, waving: 0, lookX: 0, lookY: 0, sleep: 0 });
-  const state = useRef({ section: -1, waveUntil: 0, hopAt: -10, lastActive: 0, frame: 0, show: 0 });
+  const state = useRef({ section: -1, waveUntil: 0, hopAt: -10, lastActive: 0, frame: 0, show: 0, partyUntil: 0 });
 
   useEffect(() => {
     const s = state.current;
@@ -472,12 +496,19 @@ function BuddyScene() {
     window.addEventListener("scroll", wake, { passive: true });
     window.addEventListener("keydown", wake);
     window.addEventListener("pointerover", onOver, { passive: true });
+    // The build-a-robot game finished: come out, wave and hop about.
+    const onBuilt = () => {
+      s.partyUntil = performance.now() + 3600;
+      s.waveUntil = s.partyUntil;
+    };
+    window.addEventListener("robostars:built", onBuilt);
     wake();
     return () => {
       window.removeEventListener("pointermove", wake);
       window.removeEventListener("scroll", wake);
       window.removeEventListener("keydown", wake);
       window.removeEventListener("pointerover", onOver);
+      window.removeEventListener("robostars:built", onBuilt);
     };
   }, []);
 
@@ -487,7 +518,7 @@ function BuddyScene() {
     const now = performance.now();
     const dt = Math.min(delta, 1 / 30);
     if (motion.reduced) {
-      if (hop.current) hop.current.position.y = window.scrollY > window.innerHeight * 0.6 ? -1.55 : -6;
+      if (hop.current) hop.current.scale.setScalar(window.scrollY > window.innerHeight * 0.6 ? 1 : 0.001);
       return;
     }
 
@@ -523,14 +554,20 @@ function BuddyScene() {
     // Phones have no free corner, so there it only comes out for the ending.
     const closing = document.getElementById("closing")?.getBoundingClientRect();
     const narrowOk = window.innerWidth >= 768 || (!!closing && closing.top < window.innerHeight * 0.7);
-    s.show = damp(s.show, window.scrollY > window.innerHeight * 0.6 && !busy && narrowOk ? 1 : 0, dt, 5);
+    const party = now < s.partyUntil;
+    s.show = damp(s.show, party || (window.scrollY > window.innerHeight * 0.6 && !busy && narrowOk) ? 1 : 0, dt, 6);
+    // Party: little repeated hops while it waves.
+    if (party && now - s.hopAt > 600) s.hopAt = now;
     const k = (now - s.hopAt) / 450;
-    if (hop.current)
-      hop.current.position.y = -1.55 - (1 - s.show) * 4 + (k >= 0 && k < 1 ? Math.sin(Math.PI * k) * 0.45 : 0);
+    if (hop.current) {
+      // Pops in and out by scale, anchored at its feet, so it never slides through a box edge.
+      hop.current.scale.setScalar(Math.max(0.001, s.show));
+      hop.current.position.y = -1.55 + (k >= 0 && k < 1 ? Math.sin(Math.PI * k) * 0.45 : 0);
+    }
   });
 
   return (
-    <group ref={hop} position={[0, -5.5, 0]} rotation-y={-0.35}>
+    <group ref={hop} position={[0, -1.55, 0]} scale={0.001} rotation-y={-0.35}>
       <Robot drive={drive} />
     </group>
   );
@@ -568,16 +605,20 @@ function BuilderScene({
     grab: new THREE.Vector3(),
     won: -10,
     reported: -1,
+    touched: 0,
+    /** Where each piece is actually drawn (includes the idle-hint nudge). */
+    vis: parts.map(() => new THREE.Vector3()),
   });
   const scratch = useMemo(() => ({ plane: new THREE.Plane(new THREE.Vector3(0, 0, 1), 0), hit: new THREE.Vector3() }), []);
 
   // Scatter across the table, away from the outline in the middle.
   const scatter = () => {
     const g = game.current;
-    const half = Math.max(1, (size.width / size.height) * 1.1 - 0.3);
+    // Horizontal room in board units (board scale 2.2, camera at 5, fov 30).
+    const half = Math.max(0.55, ((5 * Math.tan(THREE.MathUtils.degToRad(15)) * size.width) / size.height) / 2.2 - 0.3);
     parts.forEach((_, i) => {
       const side = i % 2 === 0 ? -1 : 1;
-      g.pos[i].set(side * (0.6 + Math.random() * (half - 0.6)), (Math.random() - 0.5) * 0.9, 0);
+      g.pos[i].set(side * (0.45 + Math.random() * Math.max(0.05, half - 0.45)), (Math.random() - 0.5) * 0.35, 0);
       g.rot[i] = (Math.random() - 0.5) * 1.6;
       g.placed[i] = false;
     });
@@ -606,7 +647,16 @@ function BuilderScene({
         g.rot[i] += (0 - g.rot[i]) * k;
       }
       const floating = !g.placed[i] && g.dragging !== i && !motion.reduced;
-      m.position.set(g.pos[i].x, g.pos[i].y + (floating ? Math.sin(t * 1.5 + i) * 0.02 : 0), g.dragging === i ? 0.25 : 0);
+      // Idle hint: after a few quiet seconds, the first loose piece drifts part-way toward
+      // its slot and back, showing what to do without a word.
+      const hinting = floating && i === g.placed.indexOf(false) && performance.now() - g.touched > 3500;
+      const nudge = hinting ? 0.35 * (0.5 - 0.5 * Math.cos(t * 2.4)) : 0;
+      m.position.set(
+        g.pos[i].x * (1 - nudge),
+        g.pos[i].y * (1 - nudge) + (floating ? Math.sin(t * 1.5 + i) * 0.02 : 0),
+        g.dragging === i ? 0.25 : 0,
+      );
+      g.vis[i].set(m.position.x, m.position.y, 0);
       m.rotation.set(0, 0, g.rot[i]);
       const lift = g.dragging === i ? 1.08 : 1;
       m.scale.setScalar(damp(m.scale.x, lift, dt, 12));
@@ -629,7 +679,7 @@ function BuilderScene({
         return c.applyAxisAngle(new THREE.Vector3(0, 0, 1), g.rot[i]);
       };
       (window as unknown as { __builder: unknown }).__builder = {
-        pieces: g.pos.map((p, i) => ndc(p.clone().add(onPiece(i)))),
+        pieces: g.vis.map((p, i) => ndc(p.clone().add(onPiece(i)))),
         homes: parts.map((_, i) => ndc(onPiece(i))),
         placed: [...g.placed],
       };
@@ -674,6 +724,9 @@ function BuilderScene({
     const p = toBoard(e);
     if (!p) return;
     g.dragging = i;
+    g.touched = performance.now();
+    // Start from where the piece is drawn, so grabbing it mid-hint doesn't make it jump.
+    g.pos[i].copy(g.vis[i]);
     g.grab.copy(p).sub(g.pos[i]);
     (e.target as Element).setPointerCapture?.(e.pointerId);
     document.body.style.cursor = "grabbing";
@@ -694,7 +747,7 @@ function BuilderScene({
   };
 
   return (
-    <group ref={board} scale={1.8}>
+    <group ref={board} scale={2.2}>
       {/* the outline to build onto */}
       {parts.map((part, i) => (
         <mesh key={`ghost-${i}`} geometry={part.geo} position={[0, 0, -0.12]} scale={[1, 1, 0.05]}>

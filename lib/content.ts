@@ -25,6 +25,10 @@ export type Project = {
   device: Device;
   /** Screen image under /public/textures, or "reevu" for the drawn dashboard. */
   screen: string;
+  /** For the phone + tablet pair: the desktop capture shown on the tablet behind. */
+  backScreen?: string;
+  /** Plain-text availability line, when a project has no direct link to give. */
+  note?: string;
 };
 
 export const featured: Project = {
@@ -48,6 +52,25 @@ export const featured: Project = {
 
 export const works: Project[] = [
   {
+    id: "thebooker",
+    name: "TheBooker",
+    kind: "Beauty and wellness booking platform",
+    summary:
+      "A full booking solution for spas, barbers, hair stylists and massage therapists: customers find a service, see live availability, book and get reminded, and businesses run it all from their dashboard.",
+    points: [
+      "Mobile app in React Native, live on the App Store and Google Play.",
+      "Web: the landing page, the admin dashboard and the business dashboard.",
+    ],
+    role: "Team project: mobile app, landing page, admin and business dashboards",
+    stack: ["React Native", "React", "Dashboards"],
+    href: "https://thebooker.online",
+    hrefLabel: "thebooker.online",
+    note: "App: TheBooker on the App Store and Google Play",
+    device: "phones",
+    screen: "/textures/thebooker-phone.jpg",
+    backScreen: "/textures/thebooker-site.jpg",
+  },
+  {
     id: "sms",
     name: "SMS Cleaning",
     kind: "Service company website",
@@ -59,6 +82,7 @@ export const works: Project[] = [
     hrefLabel: "smscleaninglb.com",
     device: "phones",
     screen: "/textures/sms-cleaning-phone.jpg",
+    backScreen: "/textures/sms-cleaning-site.jpg",
   },
   {
     id: "homeroots",

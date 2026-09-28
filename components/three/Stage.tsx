@@ -23,9 +23,11 @@ function PointerSmoother() {
 export default function Stage() {
   const quality = useQuality();
   // Adaptive resolution: `factor` eases down when frames drop and back up with headroom.
-  // Caps: 1.75x on desktop (2x mostly buys invisible pixels) and 1.25x on the low tier.
+  // Caps: 1.75x on desktop (2x mostly buys invisible pixels) and 1.5x on the low tier.
   const [factor, setFactor] = useState(1);
-  const cap = quality === "low" ? 1.25 : 1.75;
+  // The low tier stays at 1.5x: the blobs are all soft silhouettes, and below that their
+  // edges visibly stair-step on phones (MSAA is off there).
+  const cap = quality === "low" ? 1.5 : 1.75;
   const dpr = Math.max(1, Math.min(window.devicePixelRatio, 1 + factor * (cap - 1)));
   // Start judging only once loading (texture decode, shader compiles) has settled.
   const [watching, setWatching] = useState(false);

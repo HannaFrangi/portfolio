@@ -23,6 +23,7 @@ import {
 } from "@/lib/content";
 import aboutPaper from "./media/about-paper.jpg";
 import heroPlate from "./media/hero-plate.jpg";
+import portrait from "../public/textures/portrait.png";
 
 const jsonLd = {
   "@context": "https://schema.org",
@@ -155,18 +156,31 @@ function Hero() {
             offset={0}
             className="block font-display text-[clamp(2.8rem,7.4vw,7rem)] font-extrabold leading-[0.95] tracking-[-0.03em] text-moss"
           />
-          <span className="sr-only"> </span>
-          <span className="wipe-in mt-1 block font-serif text-[clamp(2.3rem,6vw,5.6rem)] italic leading-[1] tracking-[-0.01em]">
+          <span className="sr-only">, </span>
+          <span className="wipe-in mt-1 block font-serif text-[clamp(2rem,5vw,4.6rem)] italic leading-[1] tracking-[-0.01em]">
             React &amp; React Native Developer
           </span>
         </h1>
-        {/* Phones: the portrait fills the lower screen, so the pitch and the action sit here. */}
+        {/* Phones: the portrait fills the lower screen, so the pitch sits under the title. */}
         <p className="intro-late mx-auto mt-4 max-w-xs text-[0.95rem] leading-6 text-ink-soft md:hidden">
           {pitch}
         </p>
-        <a href="#work" className="intro-late pill pill-solid mt-5 md:hidden">
-          See my work <Arrow />
-        </a>
+        {/* Availability and the action, right under the name where a recruiter is looking. */}
+        <div className="intro-late mt-5 flex flex-wrap items-center justify-center gap-3">
+          <p className="pill pill-soft !text-[0.8rem] text-olive">
+            <span aria-hidden className="relative size-2 rounded-full bg-accent dot-pulse" />
+            Open to React &amp; React Native roles · {person.location}
+          </p>
+          <a href="#work" className="pill pill-solid">
+            See my work <Arrow />
+          </a>
+        </div>
+      </div>
+
+      {/* Static portrait: shows at once (and if WebGL is unavailable), then hands over to the
+          3D one, which sets html[data-portrait="3d"] when it exists. */}
+      <div aria-hidden className="portrait-fallback pointer-events-none absolute inset-x-0 bottom-0 top-[34%] flex justify-center">
+        <Image src={portrait} alt="" priority={false} sizes="(min-width: 768px) 40vw, 80vw" className="h-[140%] w-auto max-w-none object-contain object-top" />
       </div>
 
       <HeroSpot className="absolute inset-0" />
@@ -174,11 +188,8 @@ function Hero() {
       <div className="intro-late absolute bottom-10 right-6 hidden max-w-[21rem] text-right md:block lg:right-12">
         <p className="pill-soft rounded-2xl px-5 py-4 text-[1rem] leading-7 text-ink">
           {pitch}
-          <span className="mt-1 block text-sm text-ink-soft">Based in {person.location}, 2+ years in production.</span>
+          <span className="mt-1 block text-sm font-medium text-olive">2+ years shipping production apps.</span>
         </p>
-        <a href="#work" className="pill pill-solid mt-4">
-          See my work <Arrow />
-        </a>
       </div>
     </section>
   );
@@ -214,12 +225,12 @@ function Featured() {
       aria-labelledby="featured-title"
       className="relative scroll-mt-20 px-4 md:h-[230vh] md:scroll-mt-0"
     >
-      <div className="relative mx-auto grid max-w-6xl items-center gap-8 pb-4 pt-16 md:sticky md:top-0 md:h-screen md:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] md:py-0">
+      <div className="relative mx-auto grid max-w-6xl grid-cols-[minmax(0,1fr)] items-center gap-8 pb-4 pt-16 md:sticky md:top-0 md:h-screen md:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] md:py-0">
         <div className="relative z-10">
           <h2
             {...reveal(0)}
             id="featured-title"
-            className="font-display text-[clamp(3rem,7vw,6rem)] font-extrabold leading-[0.95] tracking-[-0.035em]"
+            className="font-display text-[clamp(2.3rem,10.5vw,6rem)] font-extrabold leading-[0.95] tracking-[-0.035em]"
           >
             {featured.name}
           </h2>
@@ -253,7 +264,7 @@ function Featured() {
             box) so nothing is sliced mid-page; the scene re-frames itself to compensate. */}
         <div className="relative h-[420px] md:h-[78vh]">
           <FeaturedSpot
-            className="absolute -bottom-16 -left-4 -right-4 top-0 md:-bottom-[11vh] md:left-0 md:right-[calc(-1*max(1rem,50vw-36rem))]"
+            className="absolute -bottom-16 left-0 right-0 top-0 md:-bottom-[11vh] md:right-[calc(-1*max(1rem,50vw-36rem))]"
             screen={featured.screen}
           />
         </div>
@@ -317,6 +328,7 @@ function Works() {
                     ))}
                   </div>
                   <div className="mt-auto pt-5">
+                    {w.note && <p className="mb-2 text-sm text-ink-soft">{w.note}</p>}
                     {w.href ? (
                       <a href={w.href} target="_blank" rel="noopener noreferrer" className="link">
                         {w.hrefLabel} <Arrow />
@@ -484,7 +496,7 @@ function About() {
 /** Each group says where it was used, so the list reads as evidence rather than a tag cloud. */
 function Toolkit() {
   return (
-    <section id="toolkit" data-section aria-labelledby="toolkit-title" className="scroll-mt-24 px-4 py-20">
+    <section id="toolkit" data-section aria-labelledby="toolkit-title" className="scroll-mt-24 px-4 py-14">
       <div className="mx-auto max-w-6xl">
         <h2
           {...reveal(0)}
@@ -495,10 +507,10 @@ function Toolkit() {
         </h2>
         <dl className="mt-10 border-t border-sand/60">
           {toolkit.map((t, i) => (
-            <div key={t.group} {...reveal(1 + i)} className="grid gap-2 border-b border-sand/60 py-6 md:grid-cols-[10rem_1fr_minmax(0,16rem)] md:items-baseline md:gap-8">
+            <div key={t.group} {...reveal(1 + i)} className="grid gap-1.5 border-b border-sand/60 py-4 md:grid-cols-[9rem_minmax(0,1fr)_minmax(0,1fr)] md:items-baseline md:gap-8">
               <dt className="font-serif text-2xl italic text-olive">{t.group}</dt>
-              <dd className="text-lg leading-7">{t.items.join(", ")}</dd>
-              <dd className="text-sm leading-6 text-ink-soft">Used in {t.usedIn}</dd>
+              <dd className="leading-7 text-ink-soft">{t.items.join(", ")}</dd>
+              <dd className="font-medium leading-7 text-ink">Used in {t.usedIn}</dd>
             </div>
           ))}
         </dl>
@@ -515,7 +527,7 @@ function Closing() {
         <h2 {...reveal(0)} id="closing-title" className="mt-8 font-serif text-[clamp(2.6rem,6vw,4.6rem)] italic leading-none text-moss">
           Let&apos;s build something.
         </h2>
-        <p {...reveal(1)} className="mx-auto mt-5 max-w-md text-lg leading-7 text-ink-soft">
+        <p {...reveal(1)} className="mx-auto mt-5 max-w-md text-lg leading-7 text-ink-soft text-balance">
           Thanks for scrolling. I&apos;m open to React and React Native roles, and email is the quickest way to reach me.
         </p>
         <div {...reveal(2)} className="mt-7 flex flex-wrap justify-center gap-3">

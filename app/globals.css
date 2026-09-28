@@ -206,6 +206,26 @@ html {
   transform: scaleX(var(--p, 1));
 }
 
+/* Static hero portrait: visible until the 3D portrait exists (and if WebGL never starts). */
+.portrait-fallback {
+  z-index: -1;
+  mask-image: linear-gradient(to bottom, #000 55%, transparent 88%);
+  transition: opacity 0.6s var(--ease-out);
+}
+html[data-portrait="3d"] .portrait-fallback {
+  opacity: 0;
+}
+
+/* Touch screens: every control is a comfortable thumb target. */
+@media (pointer: coarse) {
+  .pill {
+    min-height: 44px;
+  }
+  .link {
+    padding-block: 0.6rem;
+  }
+}
+
 .skip-link {
   position: absolute;
   left: 1rem;

@@ -33,8 +33,13 @@ const club: Record<string, string> = {
   [palette.accent]: "#ff6fcf", // bubblegum
 };
 
+/** The colour a sage-palette value becomes in the given theme (non-hook form). */
+export function swatchFor(color: string, theme: "sage" | "club") {
+  return theme === "club" ? (club[color] ?? color) : color;
+}
+
 export function useSwatch(color: string) {
-  return useTheme() === "club" ? (club[color] ?? color) : color;
+  return swatchFor(color, useTheme());
 }
 
 /** Window-level pointer, -1..1, shared by every view. Not React state. */
