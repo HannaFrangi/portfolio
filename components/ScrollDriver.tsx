@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { smooth } from "@/lib/smooth";
 
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
 
@@ -83,7 +84,9 @@ export default function ScrollDriver() {
       if (!card) return;
       const p = clamp01((card.offsetLeft + card.offsetWidth / 2 - rail.clientWidth / 2) / distance);
       const top = section.getBoundingClientRect().top + window.scrollY;
-      window.scrollTo({ top: top + p * (section.offsetHeight - window.innerHeight), behavior: "instant" });
+      const y = top + p * (section.offsetHeight - window.innerHeight);
+      if (smooth.lenis) smooth.lenis.scrollTo(y, { immediate: true });
+      else window.scrollTo({ top: y, behavior: "instant" });
     };
 
     update();

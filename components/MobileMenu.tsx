@@ -44,18 +44,18 @@ export default function MobileMenu({ links, github }: { links: readonly (readonl
         ref={panel}
         id="mobile-menu"
         hidden={!open}
-        className="absolute inset-x-0 top-[calc(100%+0.5rem)] rounded-[28px] border border-white/80 bg-paper p-2 shadow-[0_24px_48px_-24px_rgb(89_95_62/0.5)]"
+        className="absolute inset-x-0 top-[calc(100%+0.5rem)] rounded-[28px] border border-hairline bg-surface p-2 shadow-[0_24px_48px_-24px_rgb(89_95_62/0.5)]"
       >
         <ul>
           {links.map(([label, href]) => (
             <li key={href}>
-              <a href={href} onClick={() => setOpen(false)} className="block rounded-2xl px-4 py-3.5 text-lg font-medium hover:bg-white/50">
+              <a href={href} onClick={() => setOpen(false)} className="block rounded-2xl px-4 py-3.5 text-lg font-medium hover:bg-sand/30">
                 {label}
               </a>
             </li>
           ))}
           <li>
-            <a href={github} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 rounded-2xl px-4 py-3.5 text-lg font-medium text-olive hover:bg-white/50">
+            <a href={github} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 rounded-2xl px-4 py-3.5 text-lg font-medium text-olive hover:bg-sand/30">
               GitHub <Arrow />
             </a>
           </li>

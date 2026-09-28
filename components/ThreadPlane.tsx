@@ -51,7 +51,7 @@ export default function ThreadPlane({ pathId }: { pathId: string }) {
     <div ref={plane} aria-hidden className="thread-plane pointer-events-none absolute left-0 top-0 hidden md:block">
       <svg viewBox="0 0 48 32" className="h-8 w-12 drop-shadow-[0_6px_6px_rgb(89_95_62/0.35)]">
         {/* folded paper plane, nose to the right */}
-        <path d="M47 16 L2 2 L14 16 Z" fill="var(--paper)" stroke="var(--olive)" strokeWidth="1.2" strokeLinejoin="round" />
+        <path d="M47 16 L2 2 L14 16 Z" fill="var(--surface)" stroke="var(--olive)" strokeWidth="1.2" strokeLinejoin="round" />
         <path d="M47 16 L2 30 L14 16 Z" fill="var(--cream)" stroke="var(--olive)" strokeWidth="1.2" strokeLinejoin="round" />
         <path d="M47 16 L14 16 L20 22 Z" fill="var(--sand)" stroke="var(--olive)" strokeWidth="1" strokeLinejoin="round" />
       </svg>

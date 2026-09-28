@@ -4,10 +4,12 @@ import MobileMenu from "@/components/MobileMenu";
 import Reveal from "@/components/Reveal";
 import RobotBuilder from "@/components/RobotBuilder";
 import ScrollDriver from "@/components/ScrollDriver";
+import SmoothScroll from "@/components/SmoothScroll";
 import StageMount from "@/components/StageMount";
+import ThemeToggle from "@/components/ThemeToggle";
 import ThreadPlane from "@/components/ThreadPlane";
 import { Arrow } from "@/components/icons";
-import { BuddySpot, ClosingSpot, DeviceSpot, FeaturedSpot, HeroSpot } from "@/components/three/scenes";
+import { ClosingSpot, DeviceSpot, FeaturedSpot, HeroSpot } from "@/components/three/scenes";
 import {
   certificates,
   clients,
@@ -97,6 +99,7 @@ function Nav() {
           ))}
         </ul>
         <div className="flex items-center gap-2">
+          <ThemeToggle />
           <a href={person.cv} download className="pill pill-soft !py-1.5 max-md:hidden">
             CV
           </a>
@@ -557,8 +560,7 @@ export default function Home() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
       />
       <StageMount />
-      {/* Robot buddy: lives in the corner, drawn by the shared canvas. */}
-      <BuddySpot className="pointer-events-none fixed bottom-2 right-1 z-30 h-[140px] w-[110px] md:bottom-4 md:right-4 md:h-[190px] md:w-[150px]" />
+      <SmoothScroll />
       <ScrollDriver />
       <Reveal />
       <Nav />

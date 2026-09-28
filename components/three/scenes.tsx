@@ -4,6 +4,7 @@ import { Suspense, useEffect, useMemo, useRef, type RefObject } from "react";
 import type { ThreeEvent } from "@react-three/fiber";
 import * as THREE from "three";
 import { useFrame, useThree } from "@react-three/fiber";
+import { useTheme } from "@/lib/theme";
 import { PerspectiveCamera, useTexture, View } from "@react-three/drei";
 import type { Project } from "@/lib/content";
 import {
@@ -74,6 +75,8 @@ function Portrait() {
   useEffect(() => {
     document.documentElement.dataset.portrait = "3d";
   }, []);
+  // Night shift: lit by the warm lamp rather than daylight, a touch dimmer than the screens.
+  const dark = useTheme() === "dark";
   const img = texture.image as { width: number; height: number };
   const h = 4.5;
   return (
@@ -84,6 +87,7 @@ function Portrait() {
           the empty pixels around the cut-out so they never hide the orbit ring. */}
       <meshBasicMaterial
         map={texture}
+        color={dark ? "#d8c6b0" : "#ffffff"}
         alphaMap={portraitFade}
         transparent
         alphaTest={0.02}
@@ -386,8 +390,8 @@ const MOONS = [
 
 /**
  * The resolve: loose blobs fly in from off-screen and fall into orbit around the planet,
- * the hero's car parks on the left, and the corner robot walks in on the right to wave
- * the visitor off (it leaves its corner for this).
+ * the hero's car parks on the left, and a robot walks in on the right to wave the
+ * visitor off.
  */
 function ClosingScene({ spot }: { spot: RefObject<HTMLElement | null> }) {
   const planet = useRef<THREE.Group>(null);
@@ -466,104 +470,6 @@ function ClosingScene({ spot }: { spot: RefObject<HTMLElement | null> }) {
         </group>
       ))}
     </>
-  );
-}
-
-/* ------------------------------------------------------------ robot buddy */
-
-/**
- * A mini robot that lives in the corner of the screen. It watches the cursor, waves
- * when a new section arrives, hops when you hover a link, and dozes off when idle.
- */
-function BuddyScene() {
-  const hop = useRef<THREE.Group>(null);
-  const drive = useRef<RobotDrive>({ walking: 0, waving: 0, lookX: 0, lookY: 0, sleep: 0 });
-  const state = useRef({ section: -1, waveUntil: 0, hopAt: -10, lastActive: 0, frame: 0, show: 0, partyUntil: 0 });
-
-  useEffect(() => {
-    const s = state.current;
-    const wake = () => (s.lastActive = performance.now());
-    const onOver = (e: PointerEvent) => {
-      if ((e.target as Element | null)?.closest("a, button")) s.hopAt = performance.now();
-    };
-    window.addEventListener("pointermove", wake, { passive: true });
-    window.addEventListener("scroll", wake, { passive: true });
-    window.addEventListener("keydown", wake);
-    window.addEventListener("pointerover", onOver, { passive: true });
-    // The build-a-robot game finished: come out, wave and hop about.
-    const onBuilt = () => {
-      s.partyUntil = performance.now() + 3600;
-      s.waveUntil = s.partyUntil;
-    };
-    window.addEventListener("robostars:built", onBuilt);
-    wake();
-    return () => {
-      window.removeEventListener("pointermove", wake);
-      window.removeEventListener("scroll", wake);
-      window.removeEventListener("keydown", wake);
-      window.removeEventListener("pointerover", onOver);
-      window.removeEventListener("robostars:built", onBuilt);
-    };
-  }, []);
-
-  useFrame((_, delta) => {
-    const s = state.current;
-    const d = drive.current;
-    const now = performance.now();
-    const dt = Math.min(delta, 1 / 30);
-    // Ducks out over the pinned showcase, the works, About, the game and the ending, where it
-    // would sit on top of text or links, or next to a second robot. Phones have no free
-    // corner at all, so there it stays hidden (the ending has its own robot).
-    const mid = window.innerHeight / 2;
-    const busy = ["work", "works", "about", "build", "closing"].some((id) => {
-      const r = document.getElementById(id)?.getBoundingClientRect();
-      return !!r && r.height > 0 && r.top <= mid && r.bottom >= mid;
-    });
-    const endOnScreen = (document.getElementById("closing")?.getBoundingClientRect().top ?? Infinity) < window.innerHeight * 0.75;
-    const free = window.scrollY > window.innerHeight * 0.6 && !busy && !endOnScreen && window.innerWidth >= 768;
-    if (motion.reduced) {
-      if (hop.current) hop.current.scale.setScalar(free ? 1 : 0.001);
-      return;
-    }
-
-    // Which section holds the middle of the screen? Checked every few frames.
-    if (s.frame++ % 6 === 0) {
-      const mid = window.innerHeight / 2;
-      const sections = document.querySelectorAll("main > section");
-      let idx = -1;
-      sections.forEach((el, i) => {
-        const r = el.getBoundingClientRect();
-        if (r.top <= mid && r.bottom > mid && getComputedStyle(el).display !== "none") idx = i;
-      });
-      if (idx !== s.section) {
-        if (s.section !== -1 && idx !== -1) s.waveUntil = now + 1800;
-        s.section = idx;
-      }
-    }
-
-    // It sits bottom-right, so "looking at the cursor" is relative to that corner.
-    d.lookX = clamp01((pointer.x + 1) / 2) * 2 - 1.6;
-    d.lookY = pointer.y + 0.7;
-    d.sleep = damp(d.sleep ?? 0, now - s.lastActive > 9000 ? 1 : 0, dt, 2);
-    d.waving = damp(d.waving, now < s.waveUntil ? 1 : 0, dt, 6);
-    // Waits below the screen during the hero (so it never covers the call to action),
-    // then pops up once the visitor scrolls on.
-    const party = now < s.partyUntil;
-    s.show = damp(s.show, party || free ? 1 : 0, dt, 6);
-    // Party: little repeated hops while it waves.
-    if (party && now - s.hopAt > 600) s.hopAt = now;
-    const k = (now - s.hopAt) / 450;
-    if (hop.current) {
-      // Pops in and out by scale, anchored at its feet, so it never slides through a box edge.
-      hop.current.scale.setScalar(Math.max(0.001, s.show));
-      hop.current.position.y = -1.55 + (k >= 0 && k < 1 ? Math.sin(Math.PI * k) * 0.45 : 0);
-    }
-  });
-
-  return (
-    <group ref={hop} position={[0, -1.55, 0]} scale={0.001} rotation-y={-0.35}>
-      <Robot drive={drive} />
-    </group>
   );
 }
 
@@ -836,14 +742,6 @@ export function DeviceSpot({ className, project }: { className: string; project:
   return (
     <Spot className={className} camera={7} spotRef={ref}>
       <DeviceScene project={project} spot={ref} />
-    </Spot>
-  );
-}
-
-export function BuddySpot({ className }: { className: string }) {
-  return (
-    <Spot className={className} camera={7}>
-      <BuddyScene />
     </Spot>
   );
 }

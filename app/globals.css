@@ -13,6 +13,9 @@
   --ink: #13180a;
   --ink-soft: #55524a;
   --accent: #e0703a;
+  /* Surfaces vs. on-dark text: --paper is always the light text on olive/dark panels. */
+  --surface: #f5f2ea;
+  --hairline: rgb(255 255 255 / 0.8);
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   color-scheme: light;
 }
@@ -28,6 +31,8 @@
   --color-ink: var(--ink);
   --color-ink-soft: var(--ink-soft);
   --color-accent: var(--accent);
+  --color-surface: var(--surface);
+  --color-hairline: var(--hairline);
   --font-sans: var(--font-geist-sans), system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
   --font-serif: var(--font-instrument), Georgia, serif;
@@ -275,6 +280,10 @@ html[data-portrait="3d"] .portrait-fallback {
   html {
     scroll-behavior: smooth;
   }
+  /* Lenis does its own easing; native smooth scrolling on top of it would fight it. */
+  html.lenis {
+    scroll-behavior: auto;
+  }
 
   /* Hero boot: pill, then the name letter by letter, then the italic line wipes open. */
   .intro-pill {
@@ -370,4 +379,111 @@ html[data-portrait="3d"] .portrait-fallback {
 @keyframes pulse {
   from { transform: scale(1); opacity: 0.6; }
   to { transform: scale(2.6); opacity: 0; }
+}
+
+/* =====================================================================
+   Night shift: the same studio after dark. Olive-black room, cream type,
+   the burnt-orange signal becomes the lamp. Screens are the brightest thing.
+   ===================================================================== */
+
+[data-theme="dark"] {
+  --mist: #12150e;
+  --cream: #191d14;
+  --surface: #1f2419;
+  --hairline: rgb(237 232 220 / 0.1);
+  --sand: #4a4838;
+  --sand-2: #5a5744;
+  --moss: #b3c486; /* big type on the dark room */
+  --sage: #7f8b58;
+  --olive: #cdd4a6; /* small text and links: ~11:1 on mist */
+  --ink: #ede8dc;
+  --ink-soft: #b5af9f;
+  --accent: #f08a50;
+  color-scheme: dark;
+}
+
+[data-theme="dark"] body {
+  background:
+    radial-gradient(55vw 45vh at 85% 6%, rgb(240 138 80 / 0.1), transparent 70%),
+    radial-gradient(50vw 40vh at 5% 30%, rgb(127 139 88 / 0.14), transparent 70%),
+    linear-gradient(180deg, var(--mist) 0%, var(--cream) 45%, var(--mist) 100%);
+}
+[data-theme="dark"] body::after {
+  opacity: 0.09;
+}
+
+/* Generated plates, re-lit for night instead of regenerated. */
+[data-theme="dark"] .plate-drift img {
+  filter: brightness(0.38) saturate(0.75) contrast(1.08);
+}
+[data-theme="dark"] .portrait-fallback img {
+  filter: brightness(0.85) sepia(0.15);
+}
+[data-theme="dark"] .paper img {
+  filter: brightness(0.5) saturate(0.8);
+}
+[data-theme="dark"] .light-sweep {
+  background: linear-gradient(105deg, transparent 30%, rgb(255 170 110 / 0.22) 45%, transparent 60%);
+}
+
+@layer components {
+  [data-theme="dark"] .clay {
+    background: linear-gradient(180deg, rgb(44 50 36 / 0.72), rgb(28 32 23 / 0.62));
+    border-color: rgb(237 232 220 / 0.08);
+    box-shadow:
+      inset 0 1px 0 rgb(237 232 220 / 0.08),
+      0 24px 48px -28px rgb(0 0 0 / 0.7),
+      0 2px 6px -2px rgb(0 0 0 / 0.4);
+  }
+  [data-theme="dark"] .pill-soft {
+    background: rgb(31 36 25 / 0.7);
+    border-color: rgb(237 232 220 / 0.1);
+    box-shadow: 0 6px 18px -10px rgb(0 0 0 / 0.6);
+  }
+  /* The lamp: the one warm, lit button. Dark ink on orange (~6.9:1). */
+  [data-theme="dark"] .pill-solid {
+    background: linear-gradient(180deg, #f39a62, #e07a42);
+    color: #16190f;
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.35),
+      0 10px 28px -10px rgb(240 138 80 / 0.55);
+  }
+  [data-theme="dark"] .chip {
+    background: rgb(127 139 88 / 0.16);
+    color: #d4d9b0;
+    border-color: rgb(127 139 88 / 0.32);
+  }
+}
+
+[data-theme="dark"] .step-icon {
+  background: rgb(31 36 25 / 0.8);
+  box-shadow: inset 0 1px 0 rgb(237 232 220 / 0.08), 0 10px 24px -14px rgb(0 0 0 / 0.7);
+}
+[data-theme="dark"] .skip-link {
+  background: var(--accent);
+  color: #16190f;
+}
+[data-theme="dark"] .about-panel {
+  background: rgb(18 21 14 / 0.72);
+}
+[data-theme="dark"] ::selection {
+  background: var(--accent);
+  color: #16190f;
+}
+
+/* Theme switch: sun by day, moon at night, crossfading with a small turn. */
+.theme-sun,
+.theme-moon {
+  transform-origin: 12px 12px;
+  transition: opacity 0.4s var(--ease-out), transform 0.5s var(--ease-out);
+}
+.theme-moon,
+[data-theme="dark"] .theme-sun {
+  opacity: 0;
+  transform: rotate(-60deg) scale(0.6);
+}
+[data-theme="dark"] .theme-moon {
+  opacity: 1;
+  transform: none;
+  color: var(--accent);
 }

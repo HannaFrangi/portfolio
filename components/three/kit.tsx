@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import * as THREE from "three";
 import { useThree } from "@react-three/fiber";
 import { useQuality } from "@/lib/quality";
+import { useTheme } from "@/lib/theme";
 
 /** Palette shared with globals.css. */
 export const palette = {
@@ -17,6 +18,23 @@ export const palette = {
   accent: "#E0703A",
   chrome: "#e9ece6",
 };
+
+/**
+ * Night shift: the blobs turn to deep velvet so the warm rim light and the glowing
+ * screens carry the scene. Scenes keep asking for palette.moss etc.
+ */
+const night: Record<string, string> = {
+  [palette.moss]: "#3f6034",
+  [palette.sage]: "#5a7443",
+  [palette.olive]: "#2f3421",
+  [palette.sand]: "#6b5f47",
+  [palette.mist]: "#1a1e14",
+};
+
+/** A palette colour as the current theme shows it. */
+export function useSwatch(color: string) {
+  return useTheme() === "dark" ? (night[color] ?? color) : color;
+}
 
 /** Window-level pointer, -1..1, shared by every view. Not React state. */
 export const pointer = { x: 0, y: 0, sx: 0, sy: 0 };
@@ -123,6 +141,7 @@ export type Finish = "flock" | "clay" | "chrome" | "glow";
 
 export function FinishMaterial({ finish, color }: { finish: Finish; color: string }) {
   const quality = useQuality();
+  color = useSwatch(color);
   const normalMap = useMemo(() => (finish === "flock" ? grainTexture() : null), [finish]);
   if (quality === "low") {
     // Low tier: one standard (not physical) shader per finish. No sheen, clearcoat,
@@ -159,13 +178,15 @@ export function FinishMaterial({ finish, color }: { finish: Finish; color: strin
 
 /**
  * The environment map chrome and gloss reflect: soft light panels in a light room.
- * Built once and shared by every view (it used to be rendered per view).
+ * Built once per theme and shared by every view (it used to be rendered per view).
  */
-let envCache: THREE.Texture | null = null;
-function sharedEnvironment(gl: THREE.WebGLRenderer) {
-  if (envCache) return envCache;
+const envCache = new Map<string, THREE.Texture>();
+function sharedEnvironment(gl: THREE.WebGLRenderer, dark: boolean) {
+  const key = dark ? "dark" : "light";
+  const hit = envCache.get(key);
+  if (hit) return hit;
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color("#e9e6dc");
+  scene.background = new THREE.Color(dark ? "#15180f" : "#e9e6dc");
   const panel = (geometry: THREE.BufferGeometry, color: string, intensity: number, pos: [number, number, number], scale: [number, number]) => {
     const mesh = new THREE.Mesh(
       geometry,
@@ -177,26 +198,30 @@ function sharedEnvironment(gl: THREE.WebGLRenderer) {
     scene.add(mesh);
   };
   const plane = new THREE.PlaneGeometry(1, 1);
-  panel(plane, "#ffffff", 3, [0, 4, 3], [10, 3]);
-  panel(plane, "#dfe8c8", 1.6, [-5, 0, 2], [6, 3]);
-  panel(plane, "#f3c9a8", 1.4, [5, -1, 2], [6, 2]);
-  panel(new THREE.RingGeometry(0.5, 1, 48), "#ffffff", 1.5, [0, -3, 4], [3, 3]);
+  panel(plane, dark ? "#ffd2b0" : "#ffffff", dark ? 1.2 : 3, [0, 4, 3], [10, 3]);
+  panel(plane, dark ? "#8a6a4a" : "#dfe8c8", dark ? 0.9 : 1.6, [-5, 0, 2], [6, 3]);
+  panel(plane, dark ? "#f08a50" : "#f3c9a8", dark ? 1.6 : 1.4, [5, -1, 2], [6, 2]);
+  panel(new THREE.RingGeometry(0.5, 1, 48), dark ? "#9fb0d0" : "#ffffff", dark ? 0.6 : 1.5, [0, -3, 4], [3, 3]);
   const pmrem = new THREE.PMREMGenerator(gl);
   const texture = pmrem.fromScene(scene, 0.02).texture;
   pmrem.dispose();
-  envCache = texture;
+  envCache.set(key, texture);
   return texture;
 }
 
-/** Soft daylight studio: warm key, bounce, and the shared environment. */
+/**
+ * Soft daylight studio: warm key, bounce, and the shared environment. Night shift dims
+ * the room and turns the key into a warm lamp with a cool rim from behind.
+ */
 export function Studio() {
+  const dark = useTheme() === "dark";
   const gl = useThree((s) => s.gl);
-  const environment = useMemo(() => sharedEnvironment(gl), [gl]);
+  const environment = useMemo(() => sharedEnvironment(gl, dark), [gl, dark]);
   return (
     <>
-      <hemisphereLight args={["#fffaf0", "#9aa77a", 1.1]} />
-      <directionalLight position={[4, 6, 5]} intensity={2.2} color="#fff4e2" />
-      <directionalLight position={[-5, 2, -3]} intensity={0.7} color="#cfe0b0" />
+      <hemisphereLight args={dark ? ["#6b6a5a", "#0b0d08", 0.55] : ["#fffaf0", "#9aa77a", 1.1]} />
+      <directionalLight position={[4, 6, 5]} intensity={dark ? 2.3 : 2.2} color={dark ? "#ffd0a8" : "#fff4e2"} />
+      <directionalLight position={[-5, 2, -3]} intensity={dark ? 1.6 : 0.7} color={dark ? "#9fb4e0" : "#cfe0b0"} />
       {/* shared across views, so never disposed when one view unmounts */}
       <primitive object={environment} attach="environment" dispose={null} />
     </>

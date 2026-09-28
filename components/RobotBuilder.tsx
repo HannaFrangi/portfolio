@@ -81,11 +81,7 @@ export default function RobotBuilder() {
             className="relative h-[340px] md:h-[400px]"
             command={command}
             interactive={interactive}
-            onProgress={(n) => {
-              setPlaced(n);
-              // The corner robot comes out to celebrate (see BuddyScene).
-              if (n === PIECES) window.dispatchEvent(new Event("robostars:built"));
-            }}
+            onProgress={setPlaced}
           />
           {coarse &&
             (playing ? (
@@ -96,7 +92,7 @@ export default function RobotBuilder() {
               <button
                 type="button"
                 onClick={() => setPlaying(true)}
-                className="absolute inset-0 flex items-end justify-center bg-gradient-to-t from-paper/80 to-transparent pb-6"
+                className="absolute inset-0 flex items-end justify-center bg-gradient-to-t from-surface/80 to-transparent pb-6"
               >
                 <span className="pill pill-solid">Tap to play</span>
               </button>
