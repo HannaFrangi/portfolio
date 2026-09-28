@@ -54,12 +54,12 @@ const pitch = "I build web and mobile apps, and the admin dashboards behind them
  * Splits a line into letters that rise one after another. Letters are grouped per
  * word so lines only break between words. Screen readers get one plain sr-only copy.
  */
-function Kinetic({ text, className, offset = 0 }: { text: string; className: string; offset?: number }) {
+function Kinetic({ text, srText = text, className, offset = 0 }: { text: string; srText?: string; className: string; offset?: number }) {
   const words = text.split(" ");
   let i = offset;
   return (
     <span className={className}>
-      <span className="sr-only">{text}</span>
+      <span className="sr-only">{srText}</span>
       {words.map((word, w) => (
         <Fragment key={w}>
           <span aria-hidden className="inline-block whitespace-nowrap">
@@ -122,10 +122,13 @@ function Nav() {
         </ul>
         <div className="flex items-center gap-2">
           <ThemeToggle />
+          <a href={person.cv} download className="pill pill-soft !py-1.5 max-md:hidden">
+            CV
+          </a>
           <a href="#closing" className="pill pill-solid !py-1.5 max-md:hidden">
             Contact
           </a>
-          <MobileMenu links={[...navLinks, ["Contact", "#closing"]]} github={person.github} />
+          <MobileMenu links={[...navLinks, ["Contact", "#closing"], ["CV (PDF)", person.cv]]} github={person.github} />
         </div>
       </nav>
     </header>
@@ -153,10 +156,10 @@ function Hero() {
         <h1 id="hero-title">
           <Kinetic
             text={`Hi, I'm ${person.first}`}
+            srText={`Hi, I'm ${person.first},`}
             offset={0}
             className="block font-display text-[clamp(2.8rem,7.4vw,7rem)] font-extrabold leading-[0.95] tracking-[-0.03em] text-moss"
           />
-          <span className="sr-only">, </span>
           <span className="wipe-in mt-1 block font-serif text-[clamp(2rem,5vw,4.6rem)] italic leading-[1] tracking-[-0.01em]">
             React &amp; React Native Developer
           </span>
@@ -223,7 +226,7 @@ function Featured() {
       data-section
       data-progress="pin"
       aria-labelledby="featured-title"
-      className="relative scroll-mt-20 px-4 md:h-[230vh] md:scroll-mt-0"
+      className="relative scroll-mt-24 px-4 md:h-[230vh] md:scroll-mt-0"
     >
       <div className="relative mx-auto grid max-w-6xl grid-cols-[minmax(0,1fr)] items-center gap-8 pb-4 pt-16 md:sticky md:top-0 md:h-screen md:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] md:py-0">
         <div className="relative z-10">
@@ -236,7 +239,7 @@ function Featured() {
           </h2>
           <div {...reveal(1)} className="clay mt-6 p-7 lg:p-8">
             <p className="font-serif text-2xl italic text-olive">{featured.kind}</p>
-            <p className="mt-1 text-sm font-medium text-olive">{featured.role}</p>
+            <p className="mt-1 text-sm text-ink-soft">{featured.role}</p>
             <p className="mt-3 leading-7 text-ink-soft">{featured.summary}</p>
             <ul className="mt-5 space-y-2.5 text-[0.95rem] leading-6">
               {featured.points.map((p, i) => (
@@ -294,6 +297,9 @@ function Works() {
               <article
                 key={w.id}
                 {...reveal(1 + i)}
+                // No link to tab to: the card itself takes focus so keyboard users still reach it.
+                tabIndex={w.href ? undefined : 0}
+                aria-labelledby={`work-${w.id}`}
                 className={`clay clay-lift flex shrink-0 flex-col overflow-hidden p-3 ${
                   feature ? "md:w-[min(760px,54vw)] md:flex-row" : "md:w-[min(540px,40vw)]"
                 }`}
@@ -305,9 +311,9 @@ function Works() {
                   project={w}
                 />
                 <div className="flex flex-1 flex-col px-3 pb-3 pt-5 md:px-5">
-                  <h3 className="font-display text-2xl font-bold tracking-[-0.02em]">{w.name}</h3>
+                  <h3 id={`work-${w.id}`} className="font-display text-2xl font-bold tracking-[-0.02em]">{w.name}</h3>
                   <p className="mt-1 text-sm text-ink-soft">
-                    {w.kind} · <span className="font-medium text-olive">{w.role}</span>
+                    {w.kind} · {w.role}
                   </p>
                   <p className="mt-3 text-[0.95rem] leading-6 text-ink-soft">{w.summary}</p>
                   {feature && (
@@ -524,8 +530,12 @@ function Closing() {
     <section id="closing" data-section aria-labelledby="closing-title" className="px-4 pb-10 pt-10">
       <div className="mx-auto max-w-4xl text-center">
         <ClosingSpot className="relative left-1/2 h-[340px] w-screen -translate-x-1/2" />
-        <h2 {...reveal(0)} id="closing-title" className="mt-8 font-serif text-[clamp(2.6rem,6vw,4.6rem)] italic leading-none text-moss">
-          Let&apos;s build something.
+        <h2
+          {...reveal(0)}
+          id="closing-title"
+          className="mt-6 font-display text-[clamp(2.6rem,7vw,5.6rem)] font-extrabold leading-[0.95] tracking-[-0.035em] text-olive"
+        >
+          Let&apos;s build <span className="font-serif font-normal italic tracking-[-0.01em]">something.</span>
         </h2>
         <p {...reveal(1)} className="mx-auto mt-5 max-w-md text-lg leading-7 text-ink-soft text-balance">
           Thanks for scrolling. I&apos;m open to React and React Native roles, and email is the quickest way to reach me.
@@ -535,7 +545,7 @@ function Closing() {
             {person.email}
           </a>
           <a href={person.cv} download className="pill pill-soft">
-            Download CV
+            Download CV (PDF)
             <svg viewBox="0 0 16 16" className="size-3.5" aria-hidden>
               <path d="M8 3v8M4.5 7.5 8 11l3.5-3.5M3 13h10" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
@@ -550,7 +560,7 @@ function Closing() {
           </a>
         </p>
       </div>
-      <footer className="mx-auto mt-20 flex max-w-6xl flex-wrap items-center justify-between gap-3 border-t border-sand/50 pt-6 text-xs text-ink-soft max-md:pr-28 md:pr-40">
+      <footer className="mx-auto mt-20 flex max-w-6xl flex-wrap items-center justify-between gap-3 border-t border-sand/50 pt-6 text-xs text-ink-soft">
         <span>
           © {new Date().getFullYear()} {person.name}
         </span>
@@ -582,8 +592,8 @@ export default function Home() {
         <MemoryCard works={works} />
         <Process />
         <About />
-        <RobotBuilder />
         <Toolkit />
+        <RobotBuilder />
         <Closing />
       </main>
     </>

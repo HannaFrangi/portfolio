@@ -69,11 +69,30 @@ export default function ScrollDriver() {
       if (!cursor.raf) cursor.raf = requestAnimationFrame(ease);
     };
 
+    // Keyboard focus inside a pinned rail: scroll the page to the point where the focused
+    // card sits in the middle, instead of leaving it clipped off to the side.
+    const onFocus = (e: FocusEvent) => {
+      const target = e.target as HTMLElement | null;
+      const rail = target?.closest<HTMLElement>("[data-rail]");
+      const section = rail?.closest<HTMLElement>("[data-progress]");
+      if (!rail || !section || window.innerWidth < 768 || reduced) return;
+      // Focus can scroll the overflow-hidden frame itself; the rail's transform does that job.
+      if (rail.parentElement) rail.parentElement.scrollLeft = 0;
+      const card = [...rail.children].find((c) => c.contains(target)) as HTMLElement | undefined;
+      const distance = Math.max(1, rail.scrollWidth - rail.clientWidth);
+      if (!card) return;
+      const p = clamp01((card.offsetLeft + card.offsetWidth / 2 - rail.clientWidth / 2) / distance);
+      const top = section.getBoundingClientRect().top + window.scrollY;
+      window.scrollTo({ top: top + p * (section.offsetHeight - window.innerHeight), behavior: "instant" });
+    };
+
     update();
+    document.addEventListener("focusin", onFocus);
     window.addEventListener("scroll", schedule, { passive: true });
     window.addEventListener("resize", schedule);
     window.addEventListener("pointermove", onPointer, { passive: true });
     return () => {
+      document.removeEventListener("focusin", onFocus);
       window.removeEventListener("scroll", schedule);
       window.removeEventListener("resize", schedule);
       window.removeEventListener("pointermove", onPointer);

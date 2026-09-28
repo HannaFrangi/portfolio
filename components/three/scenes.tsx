@@ -134,7 +134,8 @@ function HeroScene() {
     // passing behind the portrait. Wheel spin follows its actual speed.
     const c = car.current;
     if (c) {
-      const arrive = motion.reduced ? 1 : easeOut(clamp01((time - 1.3) / 2));
+      // Arrives after the intro has settled, so the first seconds belong to the name and CTA.
+      const arrive = motion.reduced ? 1 : easeOut(clamp01((time - 3.2) / 2.2));
       const x = lerp(-7.5, -1.3, arrive) + out * 7;
       carDrive.current.speed = dt > 0 ? (x - c.position.x) / dt : 0;
       c.position.x = x;
@@ -143,7 +144,8 @@ function HeroScene() {
     // The pod lifts off the horizon behind the portrait and drifts up and out, on a loop.
     const pd = pod.current;
     if (pd) {
-      const cycle = motion.reduced ? 0.15 : ((time + 4) % 22) / 22;
+      // First lift-off comes a few seconds in, not during the intro.
+      const cycle = motion.reduced ? 0.15 : time < 6 ? 0.99 : ((time - 6) % 22) / 22;
       const fly = easeInOut(clamp01(cycle / 0.6));
       pd.position.set(lerp(1.1, 4.8, fly), lerp(-1.25, 1.35, fly) + Math.sin(time * 2) * 0.03, -4.5);
       pd.rotation.set(0.15, time * 0.6, lerp(0, -0.25, fly));
@@ -291,10 +293,16 @@ function cardTimeline(card: Element | null) {
   return { enter: vertical, scroll: scrollProgress(card) };
 }
 
+/** Rough width x height of each device arrangement at scale 1, for framing. */
+const FOOTPRINT = { tablet: [2.9, 2.0], phones: [3.05, 2.1], phonesTall: [2.5, 2.85], laptop: [3.4, 3.0] } as const;
+
 function DeviceScene({ project, spot }: { project: Project; spot: RefObject<HTMLElement | null> }) {
   const rig = useRef<THREE.Group>(null);
   const screenScroll = useRef(0);
   const reevu = useReevuScreen();
+  const size = useThree((s) => s.size);
+  // Tall panes (the split feature cards) stack the phone in front of the tablet instead of beside it.
+  const tall = size.width / size.height < 0.9;
 
   useFrame((state, delta) => {
     const g = rig.current;
@@ -311,29 +319,43 @@ function DeviceScene({ project, spot }: { project: Project; spot: RefObject<HTML
     g.rotation.y = damp(g.rotation.y, (hover ? pointer.sx * 0.3 : Math.sin(t * 0.4) * 0.08) - (1 - e) * 2.4, dt, 6);
     g.rotation.x = damp(g.rotation.x, hover ? -pointer.sy * 0.15 : 0, dt);
     g.position.y = damp(g.position.y, (hover ? 0.18 : 0) - (1 - e) * 1.2, dt);
-    // Narrow panes (the wide feature cards split device | text) get a smaller device so
-    // nothing is cut by the pane's edges.
-    const fit = Math.min(1, state.size.width / state.size.height / 1.35);
+    // Frame the device to fill the pane (camera 7, fov 30) without touching its edges.
+    const visH = 2 * 7 * Math.tan((15 * Math.PI) / 180);
+    const visW = visH * (state.size.width / state.size.height);
+    const [fw, fh] = FOOTPRINT[project.device === "phones" && tall ? "phonesTall" : project.device];
+    const fit = Math.min(1.1, (0.86 * visW) / fw, (0.8 * visH) / fh);
     g.scale.setScalar(damp(g.scale.x, (hover ? 1.06 : 1) * lerp(0.6, 1, e) * fit, dt));
   });
 
   const scroll = () => screenScroll.current;
   return (
     <>
-      <Blob seed={project.id.length * 3} position={[1.6, 1, -2]} scale={0.8} color={palette.sage} />
-      <Sphere position={[-1.9, -0.9, -1]} scale={0.32} color={palette.sand} />
+      <Blob seed={project.id.length * 3} position={[1.6, 1, -2.6]} scale={0.6} color={palette.sage} />
+      <Sphere position={[-1.9, -0.9, -1.6]} scale={0.26} color={palette.sand} />
       <group ref={rig}>
         <Suspense fallback={null}>
           {project.device === "phones" && (
             <>
               {project.backScreen && (
-                <Tablet src={project.backScreen} scroll={scroll} position={[-0.55, 0.25, -0.8]} rotation-y={0.35} scale={0.75} />
+                <Tablet
+                  src={project.backScreen}
+                  scroll={scroll}
+                  position={tall ? [-0.25, 0.5, -0.8] : [-0.55, 0.25, -0.8]}
+                  rotation-y={0.35}
+                  scale={0.75}
+                />
               )}
-              <Phone src={project.screen} scroll={scroll} position={[0.8, -0.1, 0.4]} rotation-y={-0.3} scale={0.95} />
+              <Phone
+                src={project.screen}
+                scroll={scroll}
+                position={tall ? [0.55, -0.45, 0.4] : [0.8, -0.1, 0.4]}
+                rotation-y={-0.3}
+                scale={0.95}
+              />
             </>
           )}
           {project.device === "laptop" && (
-            <Laptop src={project.screen} scroll={scroll} position={[0, -0.9, -0.6]} rotation={[0.32, -0.45, 0]} scale={0.95} />
+            <Laptop src={project.screen} scroll={scroll} position={[0, -1.0, -0.6]} rotation={[0.32, -0.45, 0]} scale={0.95} />
           )}
           {project.device === "tablet" && (
             <Tablet
@@ -413,16 +435,24 @@ const MOONS = [
   { seed: 27, color: palette.cream, size: 0.18, from: [6.5, 0.5, -2] },
 ] as const;
 
-/** The resolve: loose blobs fly in from off-screen and fall into orbit around the planet, then hold. */
+/**
+ * The resolve: loose blobs fly in from off-screen and fall into orbit around the planet,
+ * the hero's car parks on the left, and the corner robot walks in on the right to wave
+ * the visitor off (it leaves its corner for this).
+ */
 function ClosingScene({ spot }: { spot: RefObject<HTMLElement | null> }) {
   const planet = useRef<THREE.Group>(null);
   const moons = useRef<(THREE.Group | null)[]>([]);
   const gather = useRef(0);
   const car = useRef<THREE.Group>(null);
   const carDrive = useRef<CarDrive>({ speed: 0, lights: 1 });
+  const robot = useRef<THREE.Group>(null);
+  const robotDrive = useRef<RobotDrive>({ walking: 0, waving: 0, lookX: 0, lookY: 0 });
 
   useFrame((state, delta) => {
     const dt = Math.min(delta, 1 / 30);
+    // Half the visible width at the planet's depth: keeps the car and robot on narrow screens.
+    const halfW = 9 * Math.tan((15 * Math.PI) / 180) * (state.size.width / state.size.height);
     const section = spot.current?.closest("section") ?? null;
     let target = 1;
     if (!motion.reduced && section) {
@@ -439,10 +469,22 @@ function ClosingScene({ spot }: { spot: RefObject<HTMLElement | null> }) {
     // The car from the hero pulls up and parks by the planet; headlights blink once it stops.
     const c = car.current;
     if (c) {
-      const x = lerp(-13, -3.1, easeOut(clamp01(gather.current * 1.15)));
+      const x = lerp(-13, -Math.min(3.1, halfW - 0.75), easeOut(clamp01(gather.current * 1.15)));
       carDrive.current.speed = dt > 0 ? (x - c.position.x) / dt : 0;
       carDrive.current.lights = Math.abs(carDrive.current.speed) < 0.05 ? (Math.sin(t * 3) > 0 ? 1 : 0.2) : 1;
       c.position.x = x;
+    }
+    // Walks in once the planet has mostly gathered, turns to the visitor and waves.
+    const r = robot.current;
+    if (r) {
+      const walk = motion.reduced ? 1 : clamp01((gather.current - 0.45) / 0.45);
+      const d = robotDrive.current;
+      d.walking = walk > 0 && walk < 1 ? 1 : 0;
+      d.waving = damp(d.waving, walk >= 1 ? 1 : 0, dt, 4);
+      d.lookX = pointer.sx * 0.6;
+      d.lookY = pointer.sy * 0.4;
+      r.position.x = lerp(halfW + 1.5, Math.min(3.1, halfW - 0.95), easeOut(walk));
+      r.rotation.y = walk < 1 ? -1.2 : damp(r.rotation.y, -0.4, dt, 4);
     }
     MOONS.forEach((m, i) => {
       const moon = moons.current[i];
@@ -465,6 +507,9 @@ function ClosingScene({ spot }: { spot: RefObject<HTMLElement | null> }) {
       </group>
       <group ref={car} position={[-13, -1.45, 0.6]} rotation-y={-0.35} scale={0.6}>
         <Car drive={carDrive} />
+      </group>
+      <group ref={robot} position={[8, -1.5, 0.6]} rotation-y={-1.2} scale={0.5}>
+        <Robot drive={robotDrive} />
       </group>
       {MOONS.map((m, i) => (
         <group key={m.seed} ref={(el) => void (moons.current[i] = el)}>
@@ -517,8 +562,18 @@ function BuddyScene() {
     const d = drive.current;
     const now = performance.now();
     const dt = Math.min(delta, 1 / 30);
+    // Ducks out over the pinned showcase, the works, About, the game and the ending, where it
+    // would sit on top of text or links, or next to a second robot. Phones have no free
+    // corner at all, so there it stays hidden (the ending has its own robot).
+    const mid = window.innerHeight / 2;
+    const busy = ["work", "works", "about", "build", "closing"].some((id) => {
+      const r = document.getElementById(id)?.getBoundingClientRect();
+      return !!r && r.height > 0 && r.top <= mid && r.bottom >= mid;
+    });
+    const endOnScreen = (document.getElementById("closing")?.getBoundingClientRect().top ?? Infinity) < window.innerHeight * 0.75;
+    const free = window.scrollY > window.innerHeight * 0.6 && !busy && !endOnScreen && window.innerWidth >= 768;
     if (motion.reduced) {
-      if (hop.current) hop.current.scale.setScalar(window.scrollY > window.innerHeight * 0.6 ? 1 : 0.001);
+      if (hop.current) hop.current.scale.setScalar(free ? 1 : 0.001);
       return;
     }
 
@@ -544,18 +599,8 @@ function BuddyScene() {
     d.waving = damp(d.waving, now < s.waveUntil ? 1 : 0, dt, 6);
     // Waits below the screen during the hero (so it never covers the call to action),
     // then pops up once the visitor scrolls on.
-    // ...and ducks out over the pinned showcase, the works, About and the game, where it
-    // would sit on top of text or a second robot.
-    const mid = window.innerHeight / 2;
-    const busy = ["work", "works", "about", "build"].some((id) => {
-      const r = document.getElementById(id)?.getBoundingClientRect();
-      return !!r && r.height > 0 && r.top <= mid && r.bottom >= mid;
-    });
-    // Phones have no free corner, so there it only comes out for the ending.
-    const closing = document.getElementById("closing")?.getBoundingClientRect();
-    const narrowOk = window.innerWidth >= 768 || (!!closing && closing.top < window.innerHeight * 0.7);
     const party = now < s.partyUntil;
-    s.show = damp(s.show, party || (window.scrollY > window.innerHeight * 0.6 && !busy && narrowOk) ? 1 : 0, dt, 6);
+    s.show = damp(s.show, party || free ? 1 : 0, dt, 6);
     // Party: little repeated hops while it waves.
     if (party && now - s.hopAt > 600) s.hopAt = now;
     const k = (now - s.hopAt) / 450;

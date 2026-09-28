@@ -162,8 +162,14 @@ html {
 @media (min-width: 768px) {
   .beat {
     --on: clamp(0, (var(--p, 1) - var(--s)) * 8, 1);
-    opacity: calc(0.55 + 0.45 * var(--on));
+    /* the resting dim never drops body text below AA */
+    opacity: calc(0.75 + 0.25 * var(--on));
     transform: translateX(calc(10px * (1 - var(--on))));
+  }
+  /* Keyboard users tabbing past the card get the finished state. */
+  .clay:focus-within .beat {
+    opacity: 1;
+    transform: none;
   }
 }
 
@@ -222,7 +228,7 @@ html[data-portrait="3d"] .portrait-fallback {
     min-height: 44px;
   }
   .link {
-    padding-block: 0.6rem;
+    min-height: 44px;
   }
 }
 
@@ -333,7 +339,7 @@ html[data-portrait="3d"] .portrait-fallback {
     inset: 0;
     border-radius: inherit;
     background: inherit;
-    animation: pulse 2.4s ease-out infinite;
+    animation: pulse 2.4s ease-out 3;
   }
 }
 
