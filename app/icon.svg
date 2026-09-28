@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <style>
+    .planet { fill: #738b54; }
+    .band { fill: #959d69; }
+    .ring { fill: none; stroke: #c2b396; stroke-width: 2.2; stroke-linecap: round; }
+    .moon { fill: #e0703a; }
+    @media (prefers-color-scheme: dark) {
+      .planet { fill: #9fb477; }
+      .band { fill: #c3cc95; }
+      .ring { stroke: #e3d6b8; }
+      .moon { fill: #f08a50; }
+    }
+  </style>
+  <defs>
+    <clipPath id="body"><circle cx="16" cy="17" r="9" /></clipPath>
+  </defs>
+  <g transform="rotate(-18 16 17)">
+    <!-- back half of the ring, behind the planet -->
+    <path class="ring" d="M2.5 17 A13.5 4.4 0 0 1 29.5 17" />
+  </g>
+  <circle class="planet" cx="16" cy="17" r="9" />
+  <g clip-path="url(#body)">
+    <rect class="band" x="4" y="12.2" width="24" height="2.2" transform="rotate(-18 16 17)" />
+    <rect class="band" x="4" y="18.6" width="24" height="1.5" transform="rotate(-18 16 17)" />
+  </g>
+  <g transform="rotate(-18 16 17)">
+    <!-- front half of the ring, over the planet -->
+    <path class="ring" d="M29.5 17 A13.5 4.4 0 0 1 2.5 17" />
+  </g>
+  <circle class="moon" cx="26.5" cy="6" r="2.6" />
+</svg>
