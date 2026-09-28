@@ -5,7 +5,7 @@ import * as THREE from "three";
 import { useFrame, type ThreeElements } from "@react-three/fiber";
 import { RoundedBox, useTexture } from "@react-three/drei";
 import { textureFor, useQuality } from "@/lib/quality";
-import { FinishMaterial, blobGeometry, clamp01, easeOutBack, motion, palette, useDetail, type Finish } from "./kit";
+import { FinishMaterial, blobGeometry, clamp01, easeOutBack, grainTexture, motion, palette, useDetail, useSwatch, type Finish } from "./kit";
 
 type V3 = [number, number, number];
 
@@ -108,6 +108,165 @@ export function Donut({
       <torusGeometry args={[1, 0.42, 48, 96]} />
       <FinishMaterial finish={finish} color={color} />
     </mesh>
+  );
+}
+
+/* -------------------------------------------------------------- planets */
+
+/** Deterministic 0..1 noise for the band textures. */
+function bandRng(seed: number) {
+  let t = seed * 9301 + 49297;
+  return () => ((t = (t * 9301 + 49297) % 233280) / 233280);
+}
+
+const bandCache = new Map<string, THREE.CanvasTexture>();
+/**
+ * Soft latitude bands, like a gas giant drawn in the site palette: the base colour
+ * with lighter and darker stripes of uneven width.
+ */
+function bandTexture(base: string, stripe: string, seed: number) {
+  const key = `${base}|${stripe}|${seed}`;
+  const hit = bandCache.get(key);
+  if (hit) return hit;
+  const c = document.createElement("canvas");
+  c.width = 8;
+  c.height = 256;
+  const g = c.getContext("2d")!;
+  const r = bandRng(seed);
+  const a = new THREE.Color(base), b = new THREE.Color(stripe);
+  for (let y = 0; y < 256; y++) {
+    // A few broad bands plus fine wobble, softened so the flocked sheen still reads.
+    const band = Math.sin(y * 0.09 + seed) * 0.5 + Math.sin(y * 0.23 + seed * 2) * 0.3 + (r() - 0.5) * 0.15;
+    g.fillStyle = `#${a.clone().lerp(b, clamp01(0.5 + band * 0.6)).getHexString()}`;
+    g.fillRect(0, y, 8, 1);
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  bandCache.set(key, t);
+  return t;
+}
+
+const ringCache = new Map<string, THREE.CanvasTexture>();
+/** A 1D ring texture read by radius: bands of the ring colour with transparent gaps. */
+function ringTexture(color: string) {
+  const hit = ringCache.get(color);
+  if (hit) return hit;
+  const c = document.createElement("canvas");
+  c.width = 256;
+  c.height = 4;
+  const g = c.getContext("2d")!;
+  const col = new THREE.Color(color);
+  const [cr, cg, cb] = [col.r, col.g, col.b].map((v) => Math.round(v * 255));
+  for (let x = 0; x < 256; x++) {
+    const u = x / 255;
+    const edge = Math.min(u / 0.08, (1 - u) / 0.08, 1);
+    const gap = u > 0.58 && u < 0.64 ? 0.15 : 1; // a Cassini-style gap
+    const alpha = edge * gap * (0.55 + Math.sin(u * 40) * 0.2 + Math.sin(u * 13) * 0.15);
+    g.fillStyle = `rgba(${cr},${cg},${cb},${clamp01(alpha).toFixed(3)})`;
+    g.fillRect(x, 0, 1, 4);
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  ringCache.set(color, t);
+  return t;
+}
+
+/** A flat ring whose UVs run inner edge to outer edge, so ringTexture reads by radius. */
+function ringGeometry(inner: number, outer: number) {
+  const geo = new THREE.RingGeometry(inner, outer, 128, 1);
+  const pos = geo.attributes.position;
+  const uv = geo.attributes.uv;
+  for (let i = 0; i < pos.count; i++) {
+    const r = Math.hypot(pos.getX(i), pos.getY(i));
+    uv.setXY(i, (r - inner) / (outer - inner), 0.5);
+  }
+  return geo;
+}
+
+/**
+ * A soft banded planet in the flocked studio finish, optionally with a ring and a
+ * small moon. Spins slowly on a tilted axis, bobs, and can pop in on load.
+ */
+export function Planet({
+  position,
+  scale = 1,
+  color = palette.sage,
+  stripe = palette.cream,
+  seed = 1,
+  ring,
+  moon,
+  tilt = 0.4,
+  delay,
+}: {
+  position: V3;
+  scale?: number;
+  color?: string;
+  stripe?: string;
+  seed?: number;
+  /** Ring colour; omit for no ring. */
+  ring?: string;
+  /** Moon colour; omit for no moon. */
+  moon?: string;
+  tilt?: number;
+  delay?: number;
+}) {
+  const root = useRef<THREE.Group>(null);
+  const body = useRef<THREE.Mesh>(null);
+  const moonRig = useRef<THREE.Group>(null);
+  const detail = useDetail();
+  const low = useQuality() === "low";
+  const base = useSwatch(color);
+  const band = useSwatch(stripe);
+  const ringColor = useSwatch(ring ?? palette.sand);
+  const map = useMemo(() => (typeof document === "undefined" ? null : bandTexture(base, band, seed)), [base, band, seed]);
+  const ringMap = useMemo(() => (ring && typeof document !== "undefined" ? ringTexture(ringColor) : null), [ring, ringColor]);
+  const ringGeo = useMemo(() => (ring ? ringGeometry(1.35, 2.15) : null), [ring]);
+
+  useFrame((state, delta) => {
+    const time = state.clock.elapsedTime;
+    const g = root.current;
+    if (!g) return;
+    g.scale.setScalar(Math.max(0.001, scale * pop(time, delay)));
+    if (motion.reduced) return;
+    g.position.y = position[1] + Math.sin(time * 0.7 + seed) * 0.08;
+    if (body.current) body.current.rotation.y += delta * 0.18;
+    if (moonRig.current) moonRig.current.rotation.y = time * 0.6 + seed;
+  });
+
+  return (
+    <group ref={root} position={position} scale={delay === undefined ? scale : 0.001}>
+      <group rotation={[0.25, 0, tilt]}>
+        <mesh ref={body}>
+          <sphereGeometry args={[1, detail.sphere, Math.round(detail.sphere * 0.75)]} />
+          {low ? (
+            <meshStandardMaterial map={map} roughness={0.9} />
+          ) : (
+            <meshPhysicalMaterial
+              map={map}
+              roughness={0.95}
+              sheen={1}
+              sheenRoughness={0.55}
+              sheenColor={new THREE.Color(base).lerp(new THREE.Color("#ffffff"), 0.45)}
+              normalMap={grainTexture()}
+              normalScale={new THREE.Vector2(0.3, 0.3)}
+            />
+          )}
+        </mesh>
+        {ringGeo && ringMap && (
+          <mesh geometry={ringGeo} rotation-x={-Math.PI / 2 + 0.12}>
+            <meshStandardMaterial map={ringMap} transparent depthWrite={false} side={THREE.DoubleSide} roughness={0.6} metalness={0.2} />
+          </mesh>
+        )}
+      </group>
+      {moon && (
+        <group ref={moonRig} rotation-z={0.35}>
+          <mesh position={[1.45, 0, 0]} scale={0.2}>
+            <sphereGeometry args={[1, 24, 18]} />
+            <FinishMaterial finish="clay" color={moon} />
+          </mesh>
+        </group>
+      )}
+    </group>
   );
 }
 

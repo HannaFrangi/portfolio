@@ -25,6 +25,7 @@ import {
   LogoBadge,
   logoParts,
   Orbit,
+  Planet,
   Phone,
   Pod,
   Robot,
@@ -146,13 +147,13 @@ function HeroScene() {
     for (const g of [back.current, front.current]) if (g) g.position.z = damp(g.position.z, out * 1.6, dt, 8);
   });
 
-  // Distilled: one blob per side and the orbit ring. The portrait sits below the
+  // Distilled: one planet per side and the orbit ring. The portrait sits below the
   // title so the full job title reads; blobs keep clear of the title band and the side cards.
   return (
     <group ref={root}>
       <group ref={back}>
-        <Blob seed={1} position={[-3.6, -0.55, -2.4]} scale={0.68} color={palette.moss} delay={0.35} />
-        <Blob seed={2} position={[3.7, -0.2, -2.8]} scale={0.72} color={palette.sage} amount={0.28} delay={0.5} />
+        <Planet seed={1} position={[-3.6, -0.55, -2.4]} scale={0.6} color={palette.moss} stripe={palette.sage} ring={palette.sand} tilt={0.35} delay={0.35} />
+        <Planet seed={2} position={[3.7, -0.2, -2.8]} scale={0.7} color={palette.sage} stripe={palette.cream} moon={palette.accent} tilt={-0.3} delay={0.5} />
       </group>
       <group ref={mid}>
         <Suspense fallback={null}>
@@ -165,7 +166,7 @@ function HeroScene() {
       </group>
       <group ref={front}>
         {/* covers the photo's own crop on the right arm */}
-        <Blob seed={3} position={[1.65, -2.6, 1.2]} scale={0.56} color={palette.sage} delay={0.55} />
+        <Planet seed={3} position={[1.65, -2.6, 1.2]} scale={0.56} color={palette.sand} stripe={palette.cream} tilt={0.2} delay={0.55} />
       </group>
     </group>
   );
