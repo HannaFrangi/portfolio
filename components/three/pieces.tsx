@@ -5,8 +5,7 @@ import * as THREE from "three";
 import { useFrame, type ThreeElements } from "@react-three/fiber";
 import { RoundedBox, useTexture } from "@react-three/drei";
 import { textureFor, useQuality } from "@/lib/quality";
-import { useTheme } from "@/lib/theme";
-import { FinishMaterial, blobGeometry, clamp01, easeOutBack, motion, palette, useDetail, useSwatch, type Finish } from "./kit";
+import { FinishMaterial, blobGeometry, clamp01, easeOutBack, motion, palette, useDetail, type Finish } from "./kit";
 
 type V3 = [number, number, number];
 
@@ -339,8 +338,8 @@ export function Robot({ drive, ...props }: { drive?: { current: RobotDrive } } &
     }
     if (eyes.current) eyes.current.emissiveIntensity = (Math.sin(t * 1.3) > 0.97 ? 0.1 : 1.6) * (1 - sleep * 0.92);
   });
-  const cream = useSwatch(palette.cream);
-  const accent = useSwatch(palette.accent);
+  const cream = palette.cream;
+  const accent = palette.accent;
   const shell = <meshPhysicalMaterial color={cream} roughness={0.45} clearcoat={0.6} clearcoatRoughness={0.3} />;
   const trim = <FinishMaterial finish="flock" color={palette.moss} />;
   const chrome = <meshStandardMaterial color={palette.chrome} metalness={1} roughness={0.15} />;
@@ -424,7 +423,6 @@ export function Robot({ drive, ...props }: { drive?: { current: RobotDrive } } &
 export function useReevuScreen() {
   // Drawn at half resolution on the low tier, like the photographed screens.
   const k = useQuality() === "low" ? 0.5 : 1;
-  const club = useTheme() === "club";
   return useMemo(() => {
     if (typeof document === "undefined") return undefined;
     const W = 1200, H = 2600;
@@ -506,24 +504,11 @@ export function useReevuScreen() {
       round(1015, y + 40, 110, 44, 22, "#EDE8DC");
     }
 
-    // Soft Club: the same hue shift the generated plates get, so the screen matches the theme.
-    let out: HTMLCanvasElement = c;
-    if (club) {
-      const shifted = document.createElement("canvas");
-      shifted.width = c.width;
-      shifted.height = c.height;
-      const g2 = shifted.getContext("2d");
-      if (g2) {
-        g2.filter = "hue-rotate(150deg) saturate(1.15)";
-        g2.drawImage(c, 0, 0);
-        out = shifted;
-      }
-    }
-    const t = new THREE.CanvasTexture(out);
+    const t = new THREE.CanvasTexture(c);
     t.colorSpace = THREE.SRGBColorSpace;
     t.anisotropy = 8;
     return t;
-  }, [k, club]);
+  }, [k]);
 }
 
 /* ---------------------------------------------------------------- car */
@@ -539,8 +524,8 @@ export function Car({ drive, ...props }: { drive?: { current: CarDrive } } & Thr
   const wheels = useRef<(THREE.Group | null)[]>([]);
   const body = useRef<THREE.Group>(null);
   const lamps = useRef<(THREE.MeshStandardMaterial | null)[]>([]);
-  const cream = useSwatch(palette.cream);
-  const glass = useSwatch(palette.sage);
+  const cream = palette.cream;
+  const glass = palette.sage;
   useFrame((state, delta) => {
     const speed = motion.reduced ? 0 : (drive?.current.speed ?? 0);
     const t = state.clock.elapsedTime;
@@ -618,8 +603,8 @@ export function Car({ drive, ...props }: { drive?: { current: CarDrive } } & Thr
 
 /** The Futuro pod from the hero photo: a white saucer with a window band, legs and a soft glow. */
 export function Pod(props: ThreeElements["group"]) {
-  const white = useSwatch(palette.cream);
-  const glow = useSwatch(palette.accent);
+  const white = palette.cream;
+  const glow = palette.accent;
   return (
     <group {...props}>
       <mesh scale={[1, 0.42, 1]}>

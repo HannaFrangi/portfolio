@@ -372,57 +372,6 @@ function DeviceScene({ project, spot }: { project: Project; spot: RefObject<HTML
   );
 }
 
-/* ------------------------------------------------------- memory card icon */
-
-/**
- * Soft Club works browser: each project's device spins on a pedestal like a PS2
- * memory-card save icon. The selected one grows and spins faster; screens idle-scroll.
- */
-function IconScene({ project, selected }: { project: Project; selected: boolean }) {
-  const spin = useRef<THREE.Group>(null);
-  const reevu = useReevuScreen();
-  const idle = useRef(0);
-  useFrame((state, delta) => {
-    const g = spin.current;
-    if (!g) return;
-    const dt = Math.min(delta, 1 / 30);
-    const t = motion.reduced ? 0 : state.clock.elapsedTime;
-    // Sway rather than spin, so the live site on each screen stays in view; the
-    // selected save swings wider and livelier, like the highlighted PS2 icon.
-    const sway = selected ? Math.sin(t * 1.3) * 0.75 : Math.sin(t * 0.7) * 0.35;
-    g.rotation.y = damp(g.rotation.y, motion.reduced ? -0.25 : sway, dt, 4);
-    g.position.y = damp(g.position.y, (selected ? 0.25 : 0) + Math.sin(t * 1.6) * 0.08, dt, 6);
-    g.scale.setScalar(damp(g.scale.x, selected ? 1.08 : 0.84, dt, 6));
-    idle.current = motion.reduced ? 0.2 : (Math.sin(t * 0.35) + 1) / 2;
-  });
-  const scroll = () => idle.current;
-  // Tilted toward the camera so the glowing pedestal reads as a disc, not a line.
-  return (
-    <group rotation-x={0.32} position={[0, 0.5, 0]} scale={0.9}>
-      {/* pedestal: a glowing jelly disc */}
-      <mesh position={[0, -1.55, 0]} rotation-x={-Math.PI / 2}>
-        <circleGeometry args={[1.5, 64]} />
-        <meshBasicMaterial color={selected ? "#bcd2ff" : "#dfe6fb"} transparent opacity={0.85} toneMapped={false} />
-      </mesh>
-      <Orbit radius={1.55} position={[0, -1.5, 0]} tilt={[Math.PI / 2, 0, 0]} speed={selected ? 1.2 : 0.4} planetSize={0.07} />
-      <group ref={spin}>
-        <Suspense fallback={null}>
-          {project.device === "phones" && <Phone src={project.screen} scroll={scroll} position={[0, -0.15, 0]} scale={0.92} />}
-          {project.device === "laptop" && <Laptop src={project.screen} scroll={scroll} position={[0, -1.05, -0.75]} scale={0.95} />}
-          {project.device === "tablet" && (
-            <Tablet
-              src={project.screen === "reevu" ? undefined : project.screen}
-              texture={project.screen === "reevu" ? reevu : undefined}
-              scroll={scroll}
-              scale={0.95}
-            />
-          )}
-        </Suspense>
-      </group>
-    </group>
-  );
-}
-
 /* --------------------------------------------------------------- closing */
 
 const MOONS = [
@@ -887,14 +836,6 @@ export function DeviceSpot({ className, project }: { className: string; project:
   return (
     <Spot className={className} camera={7} spotRef={ref}>
       <DeviceScene project={project} spot={ref} />
-    </Spot>
-  );
-}
-
-export function MemoryIcon({ className, project, selected }: { className: string; project: Project; selected: boolean }) {
-  return (
-    <Spot className={className} camera={6.2}>
-      <IconScene project={project} selected={selected} />
     </Spot>
   );
 }
