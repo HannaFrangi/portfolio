@@ -333,8 +333,7 @@ function Works() {
                       </span>
                     ))}
                   </div>
-                  <div className="mt-auto pt-5">
-                    {w.note && <p className="mb-2 text-sm text-ink-soft">{w.note}</p>}
+                  <div className="mt-auto flex flex-wrap gap-x-5 pt-5">
                     {w.href ? (
                       <a href={w.href} target="_blank" rel="noopener noreferrer" className="link">
                         {w.hrefLabel} <Arrow />
@@ -342,6 +341,11 @@ function Works() {
                     ) : (
                       <span className="text-sm text-ink-soft">Private SaaS, no public link</span>
                     )}
+                    {w.links?.map((l) => (
+                      <a key={l.href} href={l.href} target="_blank" rel="noopener noreferrer" className="link">
+                        {l.label} <Arrow />
+                      </a>
+                    ))}
                   </div>
                 </div>
               </article>

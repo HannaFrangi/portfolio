@@ -77,6 +77,15 @@ export default function MemoryCard({ works }: { works: Project[] }) {
                 </span>
               ))}
             </div>
+            {current.links && (
+              <p className="mt-4 flex flex-wrap gap-x-5">
+                {current.links.map((l) => (
+                  <a key={l.href} href={l.href} target="_blank" rel="noopener noreferrer" className="link">
+                    {l.label} <Arrow />
+                  </a>
+                ))}
+              </p>
+            )}
           </div>
           {current.href ? (
             <a href={current.href} target="_blank" rel="noopener noreferrer" className="pill pill-solid self-start md:self-end">

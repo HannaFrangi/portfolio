@@ -27,8 +27,8 @@ export type Project = {
   screen: string;
   /** For the phone + tablet pair: the desktop capture shown on the tablet behind. */
   backScreen?: string;
-  /** Plain-text availability line, when a project has no direct link to give. */
-  note?: string;
+  /** Extra links shown after the main one, e.g. app store listings. */
+  links?: { label: string; href: string }[];
 };
 
 export const featured: Project = {
@@ -65,6 +65,10 @@ export const works: Project[] = [
     stack: ["React Native", "React", "Dashboards"],
     href: "https://thebooker.online",
     hrefLabel: "thebooker.online",
+    links: [
+      { label: "App Store", href: "https://apps.apple.com/us/app/thebooker/id6503916811" },
+      { label: "Google Play", href: "https://play.google.com/store/apps/details?id=com.thebooker&hl=en" },
+    ],
     device: "phones",
     screen: "/textures/thebooker-phone.jpg",
     backScreen: "/textures/thebooker-site.jpg",
