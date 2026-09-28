@@ -21,7 +21,6 @@ import {
 } from "./kit";
 import {
   Blob,
-  Car,
   Laptop,
   LogoBadge,
   logoParts,
@@ -32,7 +31,6 @@ import {
   Sphere,
   Tablet,
   useReevuScreen,
-  type CarDrive,
   type RobotDrive,
 } from "./pieces";
 
@@ -103,8 +101,6 @@ function HeroScene() {
   const mid = useRef<THREE.Group>(null);
   const front = useRef<THREE.Group>(null);
   const root = useRef<THREE.Group>(null);
-  const car = useRef<THREE.Group>(null);
-  const carDrive = useRef<CarDrive>({ speed: 0, lights: 1 });
   const pod = useRef<THREE.Group>(null);
   const size = useThree((s) => s.size);
 
@@ -134,17 +130,6 @@ function HeroScene() {
     }
     if (mid.current && !motion.reduced) mid.current.rotation.y = damp(mid.current.rotation.y, pointer.sx * 0.08, dt);
 
-    // The car rolls in on load, then drives off to the right as the hero scrolls away,
-    // passing behind the portrait. Wheel spin follows its actual speed.
-    const c = car.current;
-    if (c) {
-      // Arrives after the intro has settled, so the first seconds belong to the name and CTA.
-      const arrive = motion.reduced ? 1 : easeOut(clamp01((time - 3.2) / 2.2));
-      const x = lerp(-7.5, -1.3, arrive) + out * 7;
-      carDrive.current.speed = dt > 0 ? (x - c.position.x) / dt : 0;
-      c.position.x = x;
-    }
-
     // The pod lifts off the horizon behind the portrait and drifts up and out, on a loop.
     const pd = pod.current;
     if (pd) {
@@ -161,7 +146,7 @@ function HeroScene() {
     for (const g of [back.current, front.current]) if (g) g.position.z = damp(g.position.z, out * 1.6, dt, 8);
   });
 
-  // Distilled: one blob per side, the orbit ring and the car. The portrait sits below the
+  // Distilled: one blob per side and the orbit ring. The portrait sits below the
   // title so the full job title reads; blobs keep clear of the title band and the side cards.
   return (
     <group ref={root}>
@@ -177,9 +162,6 @@ function HeroScene() {
       </group>
       <group ref={pod} scale={0.32}>
         <Pod />
-      </group>
-      <group ref={car} position={[-7.5, -1.75, -0.9]} rotation-y={-0.12} scale={0.6}>
-        <Car drive={carDrive} />
       </group>
       <group ref={front}>
         {/* covers the photo's own crop on the right arm */}
@@ -390,21 +372,18 @@ const MOONS = [
 
 /**
  * The resolve: loose blobs fly in from off-screen and fall into orbit around the planet,
- * the hero's car parks on the left, and a robot walks in on the right to wave the
- * visitor off.
+ * and a robot walks in on the right to wave the visitor off.
  */
 function ClosingScene({ spot }: { spot: RefObject<HTMLElement | null> }) {
   const planet = useRef<THREE.Group>(null);
   const moons = useRef<(THREE.Group | null)[]>([]);
   const gather = useRef(0);
-  const car = useRef<THREE.Group>(null);
-  const carDrive = useRef<CarDrive>({ speed: 0, lights: 1 });
   const robot = useRef<THREE.Group>(null);
   const robotDrive = useRef<RobotDrive>({ walking: 0, waving: 0, lookX: 0, lookY: 0 });
 
   useFrame((state, delta) => {
     const dt = Math.min(delta, 1 / 30);
-    // Half the visible width at the planet's depth: keeps the car and robot on narrow screens.
+    // Half the visible width at the planet's depth: keeps the robot on narrow screens.
     const halfW = 9 * Math.tan((15 * Math.PI) / 180) * (state.size.width / state.size.height);
     const section = spot.current?.closest("section") ?? null;
     let target = 1;
@@ -418,14 +397,6 @@ function ClosingScene({ spot }: { spot: RefObject<HTMLElement | null> }) {
     if (planet.current) {
       planet.current.rotation.y = t * 0.15;
       planet.current.position.x = damp(planet.current.position.x, motion.reduced ? 0 : pointer.sx * 0.2, dt);
-    }
-    // The car from the hero pulls up and parks by the planet; headlights blink once it stops.
-    const c = car.current;
-    if (c) {
-      const x = lerp(-13, -Math.min(3.1, halfW - 0.75), easeOut(clamp01(gather.current * 1.15)));
-      carDrive.current.speed = dt > 0 ? (x - c.position.x) / dt : 0;
-      carDrive.current.lights = Math.abs(carDrive.current.speed) < 0.05 ? (Math.sin(t * 3) > 0 ? 1 : 0.2) : 1;
-      c.position.x = x;
     }
     // Walks in once the planet has mostly gathered, turns to the visitor and waves.
     const r = robot.current;
@@ -457,9 +428,6 @@ function ClosingScene({ spot }: { spot: RefObject<HTMLElement | null> }) {
       <group ref={planet}>
         <Blob seed={11} position={[0, 0, 0]} scale={1.1} color={palette.moss} amount={0.1} speed={0.5} />
         <Orbit radius={1.85} tilt={[1.3, 0, 0.25]} speed={0.3} />
-      </group>
-      <group ref={car} position={[-13, -1.45, 0.6]} rotation-y={-0.35} scale={0.6}>
-        <Car drive={carDrive} />
       </group>
       <group ref={robot} position={[8, -1.5, 0.6]} rotation-y={-1.2} scale={0.5}>
         <Robot drive={robotDrive} />

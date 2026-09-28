@@ -149,6 +149,9 @@ export const education = [
   { title: "BSc Computer Science", place: "Lebanese International University", period: "2021 to 2025" },
 ];
 
+/** Teaching credential, alongside the Cisco networking certificates below. */
+export const steam = "STEAM certified";
+
 export const certificates = ["CCNA: Introduction to Networks", "CCNA: Routing and Switching", "IT Essentials", "Network Security"];
 
 /** Each group names where it was actually used, from the résumé. */

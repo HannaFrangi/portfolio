@@ -18,6 +18,7 @@ import {
   featured,
   person,
   process,
+  steam,
   toolkit,
   works,
 } from "@/lib/content";
@@ -471,7 +472,7 @@ function About() {
                 ))}
               </ul>
               <p {...reveal(6)} className="mt-4 text-sm leading-6 text-paper/85">
-                Cisco: {certificates.join(", ")}.
+                <span className="font-medium text-paper">{steam}.</span> Cisco: {certificates.join(", ")}.
               </p>
             </div>
           </div>
