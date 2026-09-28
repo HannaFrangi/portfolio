@@ -40,6 +40,7 @@ html {
 }
 
 body {
+  overflow-x: clip;
   color: var(--ink);
   font-family: var(--font-sans);
   background:
@@ -156,11 +157,14 @@ html {
  * is the finished state, so without JS or with reduced motion the page is complete.
  */
 
-/* RoboStars points light one by one as the pinned timeline passes --s. */
-.beat {
-  --on: clamp(0, (var(--p, 1) - var(--s)) * 8, 1);
-  opacity: calc(0.55 + 0.45 * var(--on));
-  transform: translateX(calc(10px * (1 - var(--on))));
+/* RoboStars points light one by one as the pinned timeline passes --s. Desktop only:
+   on phones nothing pins, so the points are simply shown at full strength. */
+@media (min-width: 768px) {
+  .beat {
+    --on: clamp(0, (var(--p, 1) - var(--s)) * 8, 1);
+    opacity: calc(0.55 + 0.45 * var(--on));
+    transform: translateX(calc(10px * (1 - var(--on))));
+  }
 }
 
 /* How I work: the thread draws, each card rises and its number warms up. */
@@ -190,6 +194,8 @@ html {
   border-radius: 999px;
   background: rgb(149 157 105 / 0.3);
   overflow: hidden;
+  /* only while the sequence is running: gone before it starts and once it is done */
+  opacity: clamp(0, min(var(--p, 0) * 25, (1 - var(--p, 0)) * 25), 1);
 }
 .pin-progress::after {
   content: "";
@@ -239,9 +245,6 @@ html {
   .about-panel { padding: 2.25rem; }
 }
 
-.marquee-mask {
-  mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
-}
 
 @media (prefers-reduced-motion: no-preference) {
   html {
@@ -264,10 +267,6 @@ html {
     animation: rise 1.1s var(--ease-out) 1.3s both;
   }
 
-  .marquee {
-    animation: drift 38s linear infinite;
-  }
-
   /* The landscape breathes: a slow push-in and drift, never still. */
   .plate-drift {
     animation: breathe 26s ease-in-out infinite alternate;
@@ -278,9 +277,6 @@ html {
     background: linear-gradient(105deg, transparent 30%, rgb(255 236 200 / 0.28) 45%, transparent 60%);
     mix-blend-mode: soft-light;
     animation: sweep 9s ease-in-out infinite;
-  }
-  .marquee-mask:hover .marquee {
-    animation-play-state: paused;
   }
 
   /* Scroll reveals apply only once JS has marked the page, so content stays visible without it. */
@@ -346,9 +342,6 @@ html {
   50% { transform: translateX(60%); }
 }
 
-@keyframes drift {
-  to { transform: translateX(-50%); }
-}
 
 @keyframes pulse {
   from { transform: scale(1); opacity: 0.6; }

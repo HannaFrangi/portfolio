@@ -189,15 +189,24 @@ function FeaturedScene({ spot, screen }: { spot: RefObject<HTMLElement | null>; 
     const p = progress.current;
     const t = motion.reduced ? 0 : state.clock.elapsedTime;
 
-    // The view bleeds past its grid column (so props are never sliced mid-page); shift the
-    // camera by half the uneven bleed so the composition stays centred on the column.
+    // The view bleeds past its grid column (right and down) so props are never sliced
+    // mid-page. Re-frame so the composition keeps the scale and centre it has on the column:
+    // widen the vertical FOV for the extra height, and shift the camera by half each bleed.
     const el = spot.current;
     const col = el?.parentElement;
-    if (el && col) {
+    const cam = state.camera as THREE.PerspectiveCamera;
+    if (el && col && cam.isPerspectiveCamera) {
       const a = el.getBoundingClientRect();
       const b = col.getBoundingClientRect();
-      const worldPerPx = (2 * 8 * Math.tan(THREE.MathUtils.degToRad(15))) / Math.max(1, a.height);
-      state.camera.position.x = ((a.right - b.right - (b.left - a.left)) / 2) * worldPerPx;
+      const half = Math.tan(THREE.MathUtils.degToRad(15)); // base fov 30 over the column height
+      const fov = THREE.MathUtils.radToDeg(2 * Math.atan((half * a.height) / Math.max(1, b.height)));
+      if (Math.abs(cam.fov - fov) > 0.01) {
+        cam.fov = fov;
+        cam.updateProjectionMatrix();
+      }
+      const worldPerPx = (2 * 8 * half) / Math.max(1, b.height);
+      cam.position.x = ((a.right - b.right - (b.left - a.left)) / 2) * worldPerPx;
+      cam.position.y = -((a.bottom - b.bottom - (b.top - a.top)) / 2) * worldPerPx;
     }
 
     const turn = easeOut(span(p, 0, 0.18));
@@ -228,7 +237,7 @@ function FeaturedScene({ spot, screen }: { spot: RefObject<HTMLElement | null>; 
       {/* The client's logo assembles itself as the tablet swings round, then floats top-left. */}
       <LogoBadge assemble={() => span(progress.current, 0.03, 0.24)} position={[1.3, 0.85, 0.9]} scale={1.05} />
       <Blob seed={7} position={[2.3, 0.4, -2.4]} scale={0.95} color={palette.sage} />
-      <Blob seed={8} position={[-1.7, -1.75, 0.4]} scale={0.42} color={palette.moss} />
+      <Blob seed={8} position={[-1.7, -1.5, 0.4]} scale={0.42} color={palette.moss} />
       <group ref={tablet}>
         <Suspense fallback={null}>
           <Tablet src={screen} scroll={scroll} />
@@ -237,7 +246,7 @@ function FeaturedScene({ spot, screen }: { spot: RefObject<HTMLElement | null>; 
       <group ref={orbit}>
         <Orbit radius={2.35} position={[-0.3, 0.25, 0]} tilt={[1.35, 0, -0.25]} speed={0.2} phase={2} />
       </group>
-      <group ref={robot} position={[7.5, -2.05, 1]} rotation-y={-1.2} scale={0.56}>
+      <group ref={robot} position={[7.5, -1.85, 1]} rotation-y={-1.2} scale={0.56}>
         <Robot drive={drive} />
       </group>
     </>
@@ -406,7 +415,7 @@ function ClosingScene({ spot }: { spot: RefObject<HTMLElement | null> }) {
     // The car from the hero pulls up and parks by the planet; headlights blink once it stops.
     const c = car.current;
     if (c) {
-      const x = lerp(-8, -3.1, easeOut(clamp01(gather.current * 1.15)));
+      const x = lerp(-13, -3.1, easeOut(clamp01(gather.current * 1.15)));
       carDrive.current.speed = dt > 0 ? (x - c.position.x) / dt : 0;
       carDrive.current.lights = Math.abs(carDrive.current.speed) < 0.05 ? (Math.sin(t * 3) > 0 ? 1 : 0.2) : 1;
       c.position.x = x;
@@ -420,6 +429,7 @@ function ClosingScene({ spot }: { spot: RefObject<HTMLElement | null> }) {
       const ox = Math.cos(a) * radius, oz = Math.sin(a) * radius;
       const oy = oz * 0.28;
       moon.position.set(lerp(m.from[0], ox, g), lerp(m.from[1], oy, g), lerp(m.from[2], oz * 0.6, g));
+      moon.scale.setScalar(Math.max(0.001, easeOut(clamp01(gather.current * 1.4))));
     });
   });
 
@@ -429,7 +439,7 @@ function ClosingScene({ spot }: { spot: RefObject<HTMLElement | null> }) {
         <Blob seed={11} position={[0, 0, 0]} scale={1.1} color={palette.moss} amount={0.1} speed={0.5} />
         <Orbit radius={1.85} tilt={[1.3, 0, 0.25]} speed={0.3} />
       </group>
-      <group ref={car} position={[-8, -1.45, 0.6]} rotation-y={-0.35} scale={0.6}>
+      <group ref={car} position={[-13, -1.45, 0.6]} rotation-y={-0.35} scale={0.6}>
         <Car drive={carDrive} />
       </group>
       {MOONS.map((m, i) => (
@@ -733,15 +743,21 @@ function Spot({
   fov = 30,
   children,
   spotRef,
+  interactive = false,
 }: {
   className: string;
   camera?: number;
   fov?: number;
   children: React.ReactNode;
   spotRef?: RefObject<HTMLDivElement | null>;
+  /** Only for 3D that takes pointer input: drei's View aims events only when the event
+   *  target is its own box, so that box must receive them. */
+  interactive?: boolean;
 }) {
   return (
-    <div ref={spotRef} className={className} aria-hidden>
+    // Decorative boxes are pointer-events-none: they only tell the shared canvas where to
+    // draw, and clicks and taps must reach the page beneath (the hero CTA sits under one).
+    <div ref={spotRef} className={`${interactive ? "" : "pointer-events-none"} ${className}`} aria-hidden>
       <View className="absolute inset-0">
         <PerspectiveCamera makeDefault position={[0, 0, camera]} fov={fov} />
         <Studio />
@@ -805,7 +821,7 @@ export function BuilderSpot({
   onProgress: (placed: number) => void;
 }) {
   return (
-    <Spot className={className} camera={5}>
+    <Spot className={className} camera={5} interactive>
       <BuilderScene command={command} interactive={interactive} onProgress={onProgress} />
     </Spot>
   );

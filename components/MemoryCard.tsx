@@ -59,7 +59,9 @@ export default function MemoryCard({ works }: { works: Project[] }) {
         </div>
 
         {/* Detail panel: what the PS2 shows under the icons for the highlighted save. */}
-        <div aria-live="polite" className="memory-detail mx-3 mb-3 mt-4 grid gap-4 rounded-[26px] p-6 md:mx-10 md:mb-10 md:grid-cols-[1fr_auto] md:items-end md:p-8">
+        {/* Not a live region: the focused save's button already names it, and announcing
+            every hover would be noise for screen-reader users who also use a mouse. */}
+        <div className="memory-detail mx-3 mb-3 mt-4 grid gap-4 rounded-[26px] p-6 md:mx-10 md:mb-10 md:grid-cols-[1fr_auto] md:items-end md:p-8">
           <div>
             <h3 className="font-display text-3xl font-bold tracking-[-0.01em] md:text-4xl">{current.name}</h3>
             <p className="mt-1 text-sm text-ink-soft">

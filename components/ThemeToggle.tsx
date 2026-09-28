@@ -12,6 +12,7 @@ export default function ThemeToggle() {
     <button
       type="button"
       aria-pressed={club}
+      aria-label="Soft Club theme"
       onClick={() => setTheme(club ? "sage" : "club")}
       className="theme-toggle pill pill-soft !gap-2 !py-1.5 !pl-3 !pr-1.5 !text-xs font-medium"
     >

@@ -46,6 +46,9 @@ const navLinks = [
   ["Toolkit", "#toolkit"],
 ] as const;
 
+/** One sentence the whole page should leave behind. */
+const pitch = "I build web and mobile apps, and the admin dashboards behind them. I also teach kids to build robots.";
+
 /**
  * Splits a line into letters that rise one after another. Letters are grouped per
  * word so lines only break between words. Screen readers get one plain sr-only copy.
@@ -118,10 +121,10 @@ function Nav() {
         </ul>
         <div className="flex items-center gap-2">
           <ThemeToggle />
-          <a href={person.github} target="_blank" rel="noopener noreferrer" className="pill pill-solid !py-1.5 max-md:hidden">
-            GitHub <Arrow />
+          <a href="#closing" className="pill pill-solid !py-1.5 max-md:hidden">
+            Contact
           </a>
-          <MobileMenu links={navLinks} github={person.github} />
+          <MobileMenu links={[...navLinks, ["Contact", "#closing"]]} github={person.github} />
         </div>
       </nav>
     </header>
@@ -159,7 +162,7 @@ function Hero() {
         </h1>
         {/* Phones: the portrait fills the lower screen, so the pitch and the action sit here. */}
         <p className="intro-late mx-auto mt-4 max-w-xs text-[0.95rem] leading-6 text-ink-soft md:hidden">
-          Web apps, mobile apps and the dashboards that run them. Based in {person.location}.
+          {pitch}
         </p>
         <a href="#work" className="intro-late pill pill-solid mt-5 md:hidden">
           See my work <Arrow />
@@ -168,16 +171,10 @@ function Hero() {
 
       <HeroSpot className="absolute inset-0" />
 
-      <div className="intro-late absolute bottom-10 left-6 hidden max-w-[16rem] md:block lg:left-12">
-        <p className="pill pill-soft !text-[0.8rem] text-olive">Web · Mobile · Admin dashboards</p>
-        <p className="pill-soft mt-3 rounded-2xl px-4 py-3 text-sm leading-6 text-ink-soft">
-          2+ years building production apps for real clients, from {person.location}.
-        </p>
-      </div>
-      <div className="intro-late absolute bottom-10 right-6 hidden max-w-[19rem] text-right md:block lg:right-12">
-        <p className="pill-soft rounded-2xl px-4 py-3 text-[0.95rem] leading-6 text-ink-soft">
-          I build web apps, mobile apps and the admin dashboards that run them, from the first requirement to
-          deployment.
+      <div className="intro-late absolute bottom-10 right-6 hidden max-w-[21rem] text-right md:block lg:right-12">
+        <p className="pill-soft rounded-2xl px-5 py-4 text-[1rem] leading-7 text-ink">
+          {pitch}
+          <span className="mt-1 block text-sm text-ink-soft">Based in {person.location}, 2+ years in production.</span>
         </p>
         <a href="#work" className="pill pill-solid mt-4">
           See my work <Arrow />
@@ -187,29 +184,21 @@ function Hero() {
   );
 }
 
+/** Context, not a logo wall: who the work below was built for, in one sentence. */
 function Clients() {
-  const row = (hidden: boolean) => (
-    <ul aria-hidden={hidden || undefined} className="flex shrink-0 items-center gap-12 pr-12">
-      {clients.map((c) => (
-        <li key={c} className="flex items-center gap-3 whitespace-nowrap font-serif text-3xl italic text-olive">
-          <span aria-hidden className="size-2 rotate-45 rounded-[2px] bg-sage" />
-          {c}
-        </li>
-      ))}
-    </ul>
-  );
+  const [employer, ...solo] = clients;
+  const em = (name: string) => <em className="font-serif text-[1.35em] text-olive">{name}</em>;
   return (
-    <section data-section aria-labelledby="clients-title" className="pb-4 pt-14">
-      <h2 {...reveal(0)} id="clients-title" className="text-center font-display text-sm font-medium uppercase tracking-[0.25em] text-ink-soft">
-        Clients and teams
-      </h2>
-      {/* Two copies side by side so the drift loops without a seam. */}
-      <div {...reveal(1)} className="marquee-mask mt-6 overflow-hidden">
-        <div className="marquee flex w-max">
-          {row(false)}
-          {row(true)}
-        </div>
-      </div>
+    <section data-section aria-label="Who I build for" className="px-4 pb-6 pt-16">
+      <p {...reveal(0)} className="mx-auto max-w-2xl text-center text-lg leading-9 text-ink-soft">
+        Developer at {em(employer)}, and solo builder for{" "}
+        {solo.map((c, i) => (
+          <Fragment key={c}>
+            {em(c)}
+            {i < solo.length - 2 ? ", " : i === solo.length - 2 ? " and " : "."}
+          </Fragment>
+        ))}
+      </p>
     </section>
   );
 }
@@ -223,14 +212,14 @@ function Featured() {
       data-section
       data-progress="pin"
       aria-labelledby="featured-title"
-      className="relative scroll-mt-0 px-4 md:h-[230vh]"
+      className="relative scroll-mt-20 px-4 md:h-[230vh] md:scroll-mt-0"
     >
-      <div className="relative mx-auto grid max-w-6xl items-center gap-8 py-16 md:sticky md:top-0 md:h-screen md:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] md:py-0">
+      <div className="relative mx-auto grid max-w-6xl items-center gap-8 pb-4 pt-16 md:sticky md:top-0 md:h-screen md:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] md:py-0">
         <div className="relative z-10">
           <h2
             {...reveal(0)}
             id="featured-title"
-            className="font-display text-[clamp(2.4rem,5vw,4.2rem)] font-bold tracking-[-0.03em]"
+            className="font-display text-[clamp(3rem,7vw,6rem)] font-extrabold leading-[0.95] tracking-[-0.035em]"
           >
             {featured.name}
           </h2>
@@ -254,15 +243,19 @@ function Featured() {
               ))}
             </div>
             {featured.href && (
-              <a href={featured.href} target="_blank" rel="noopener noreferrer" className="pill pill-solid mt-7">
-                Visit {featured.hrefLabel} <Arrow />
+              <a href={featured.href} target="_blank" rel="noopener noreferrer" className="link mt-7 text-base">
+                {featured.hrefLabel} <Arrow />
               </a>
             )}
           </div>
         </div>
-        {/* The 3D bleeds past its column to the viewport edge, so nothing is sliced mid-page. */}
+        {/* The 3D bleeds past its column (right to the viewport edge, and down past the
+            box) so nothing is sliced mid-page; the scene re-frames itself to compensate. */}
         <div className="relative h-[420px] md:h-[78vh]">
-          <FeaturedSpot className="absolute inset-y-0 -left-4 -right-4 md:left-0 md:right-[calc(-1*max(1rem,50vw-36rem))]" screen={featured.screen} />
+          <FeaturedSpot
+            className="absolute -bottom-16 -left-4 -right-4 top-0 md:-bottom-[11vh] md:left-0 md:right-[calc(-1*max(1rem,50vw-36rem))]"
+            screen={featured.screen}
+          />
         </div>
         <div aria-hidden className="pin-progress hidden md:block" />
       </div>
@@ -274,7 +267,7 @@ function Featured() {
 function Works() {
   return (
     <section id="works" data-section data-progress="pin" aria-labelledby="works-title" className="theme-sage-only relative md:h-[220vh]">
-      <div className="relative py-20 md:sticky md:top-0 md:flex md:h-screen md:flex-col md:justify-center md:overflow-hidden md:py-0">
+      <div className="relative pb-20 pt-10 md:sticky md:top-0 md:flex md:h-screen md:flex-col md:justify-center md:overflow-hidden md:py-0">
         <div data-rail className="flex flex-col gap-6 px-4 will-change-transform md:flex-row md:items-stretch md:px-[6vw]">
           <div {...reveal(0)} className="flex shrink-0 flex-col justify-center md:w-[26vw] md:pr-4">
             <h2 id="works-title" className="font-display text-[clamp(2.4rem,4.6vw,4.2rem)] font-bold leading-[0.98] tracking-[-0.03em]">
@@ -492,7 +485,7 @@ function About() {
 function Toolkit() {
   return (
     <section id="toolkit" data-section aria-labelledby="toolkit-title" className="scroll-mt-24 px-4 py-20">
-      <div className="mx-auto max-w-5xl">
+      <div className="mx-auto max-w-6xl">
         <h2
           {...reveal(0)}
           id="toolkit-title"
@@ -518,12 +511,12 @@ function Closing() {
   return (
     <section id="closing" data-section aria-labelledby="closing-title" className="px-4 pb-10 pt-10">
       <div className="mx-auto max-w-4xl text-center">
-        <ClosingSpot className="relative mx-auto h-[340px] max-w-2xl" />
+        <ClosingSpot className="relative left-1/2 h-[340px] w-screen -translate-x-1/2" />
         <h2 {...reveal(0)} id="closing-title" className="mt-8 font-serif text-[clamp(2.6rem,6vw,4.6rem)] italic leading-none text-moss">
-          Thanks for scrolling.
+          Let&apos;s build something.
         </h2>
         <p {...reveal(1)} className="mx-auto mt-5 max-w-md text-lg leading-7 text-ink-soft">
-          Open to React and React Native roles. Email is the quickest way to reach me.
+          Thanks for scrolling. I&apos;m open to React and React Native roles, and email is the quickest way to reach me.
         </p>
         <div {...reveal(2)} className="mt-7 flex flex-wrap justify-center gap-3">
           <a href={`mailto:${person.email}`} className="pill pill-solid">

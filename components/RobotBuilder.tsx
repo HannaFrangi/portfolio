@@ -28,8 +28,9 @@ export default function RobotBuilder() {
 
   return (
     <section id="build" data-section aria-labelledby="builder-title" className="px-4 py-20">
-      <div className="mx-auto grid max-w-6xl items-center gap-8 md:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
-        <div>
+      {/* Mirrored split (toy left, copy right) so it doesn't repeat the featured layout. */}
+      <div className="mx-auto grid max-w-6xl items-center gap-8 md:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
+        <div className="md:order-2">
           <h2
             data-reveal
             id="builder-title"
@@ -73,9 +74,10 @@ export default function RobotBuilder() {
             </button>
           </div>
         </div>
-        <div data-reveal className="clay relative overflow-hidden">
+        {/* touch-none lives on the card (the 3D box passes pointer events through) */}
+        <div data-reveal className={`clay relative overflow-hidden ${interactive ? "touch-none" : ""}`}>
           <BuilderSpot
-            className={`relative h-[360px] cursor-default md:h-[460px] ${interactive ? "touch-none" : ""}`}
+            className="relative h-[360px] md:h-[460px]"
             command={command}
             interactive={interactive}
             onProgress={setPlaced}
