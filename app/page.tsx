@@ -162,7 +162,7 @@ function Hero() {
       {/* Static portrait: shows at once (and if WebGL is unavailable), then hands over to the
           3D one, which sets html[data-portrait="3d"] when it exists. */}
       <div aria-hidden className="portrait-fallback pointer-events-none absolute inset-x-0 bottom-0 top-[34%] flex justify-center">
-        <Image src={portrait} alt="" priority={false} sizes="(min-width: 768px) 40vw, 80vw" className="h-[140%] w-auto max-w-none object-contain object-top" />
+        <Image src={portrait} alt="" loading="eager" fetchPriority="high" sizes="(min-width: 768px) 40vw, 80vw" className="h-[140%] w-auto max-w-none object-contain object-top" />
       </div>
 
       <HeroSpot className="absolute inset-0" />
@@ -365,7 +365,8 @@ function Process() {
       aria-labelledby="process-title"
       className="scroll-mt-24 px-4 py-24"
     >
-      <div className="mx-auto max-w-6xl">
+      {/* Phones: one centred column; desktop keeps the left-aligned run along the thread. */}
+      <div className="mx-auto max-w-6xl max-md:text-center">
         <h2
           {...reveal(0)}
           id="process-title"
@@ -373,11 +374,11 @@ function Process() {
         >
           How I work
         </h2>
-        <p {...reveal(1)} className="mt-3 max-w-xl text-lg leading-8 text-ink-soft">
+        <p {...reveal(1)} className="mt-3 max-w-xl text-lg leading-8 text-ink-soft max-md:mx-auto">
           I teach kids robotics at RoboStars, so I&apos;m used to breaking a problem into steps anyone can follow.
           Client work runs the same way.
         </p>
-        <ol className="relative mt-24 grid gap-12 md:grid-cols-3 md:gap-10">
+        <ol className="relative mt-14 grid gap-12 md:mt-24 md:grid-cols-3 md:gap-10">
           {/* The thread draws itself with scroll; each step lights as it arrives. */}
           <svg
             aria-hidden
@@ -397,7 +398,7 @@ function Process() {
             <li key={p.step} className={`step relative ${i === 1 ? "md:translate-y-8" : ""}`} style={{ ["--s" as string]: at[i] }}>
               <span className="step-icon inline-flex size-14 items-center justify-center rounded-full">{stepIcons[i]}</span>
               <h3 className="mt-5 font-serif text-3xl italic">{p.title}</h3>
-              <p className="mt-2 max-w-xs leading-7 text-ink-soft">{p.body}</p>
+              <p className="mt-2 max-w-xs leading-7 text-ink-soft max-md:mx-auto">{p.body}</p>
             </li>
           ))}
         </ol>
