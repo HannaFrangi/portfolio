@@ -2,6 +2,8 @@ export const person = {
   email: "hannafrangi.hf@gmail.com",
   cv: "/HannaAlFrangi-CV.pdf",
   name: "Hanna Al Frangi",
+  /** The shorter form used on GitHub, so AI engines treat both as one person. */
+  altName: "Hanna Frangi",
   first: "Hanna",
   role: "React & React Native Developer",
   location: "Lebanon",

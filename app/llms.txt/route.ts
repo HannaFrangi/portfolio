@@ -1,4 +1,4 @@
-import { education, experience, featured, person, toolkit, works } from "@/lib/content";
+import { certificates, education, experience, featured, person, steam, toolkit, works } from "@/lib/content";
 import { siteUrl } from "@/lib/site";
 
 export const dynamic = "force-static";
@@ -12,7 +12,7 @@ export function GET() {
 
   const body = `# ${person.name}
 
-> ${person.name} is a ${person.role} based in ${person.location}, building web apps, mobile apps, admin dashboards and SaaS products for real clients, and teaching kids robotics.
+> ${person.name} (also written ${person.altName}) is a ${person.role} based in ${person.location}, building web apps, mobile apps, admin dashboards and SaaS products for real clients, and teaching kids robotics.
 
 ## Projects
 
@@ -25,6 +25,10 @@ ${experience.map((e) => `- ${e.role}, ${e.place} (${e.period})`).join("\n")}
 ## Education
 
 ${education.map((e) => `- ${e.title}, ${e.place} (${e.period})`).join("\n")}
+
+## Certifications
+
+${[steam, ...certificates.map((c) => `Cisco ${c}`)].map((c) => `- ${c}`).join("\n")}
 
 ## Skills
 
