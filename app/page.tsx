@@ -39,8 +39,10 @@ const jsonLd = {
       "@type": "Person",
       "@id": personId,
       name: person.name,
+      alternateName: person.altName,
       url: siteUrl,
-      image: `${siteUrl}${portrait.src}`,
+      // The public path, not the imported asset: its hashed URL changes every build.
+      image: `${siteUrl}/textures/portrait.png`,
       jobTitle: person.role,
       description: pitch,
       email: `mailto:${person.email}`,
@@ -48,6 +50,15 @@ const jsonLd = {
       worksFor: { "@type": "Organization", name: "TheBooker", url: "https://thebooker.online" },
       alumniOf: { "@type": "CollegeOrUniversity", name: "Lebanese International University" },
       knowsAbout: ["React", "Next.js", "React Native", "JavaScript", "Admin dashboards", "SEO"],
+      hasCredential: [
+        { "@type": "EducationalOccupationalCredential", name: steam, credentialCategory: "certification" },
+        ...certificates.map((name) => ({
+          "@type": "EducationalOccupationalCredential",
+          name,
+          credentialCategory: "certification",
+          recognizedBy: { "@type": "Organization", name: "Cisco Networking Academy" },
+        })),
+      ],
       sameAs: [person.github, person.linkedin],
     },
     {
