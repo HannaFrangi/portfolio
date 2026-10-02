@@ -22,21 +22,50 @@ import {
   toolkit,
   works,
 } from "@/lib/content";
+import { siteUrl } from "@/lib/site";
 import aboutPaper from "./media/about-paper.jpg";
 import heroPlate from "./media/hero-plate.jpg";
 import portrait from "../public/textures/portrait.png";
 
+/** One sentence the whole page should leave behind. */
+const pitch = "I build web and mobile apps, and the admin dashboards behind them. I also teach kids to build robots.";
+
+const personId = `${siteUrl}/#person`;
+
 const jsonLd = {
   "@context": "https://schema.org",
-  "@type": "Person",
-  name: person.name,
-  jobTitle: person.role,
-  email: `mailto:${person.email}`,
-  address: { "@type": "PostalAddress", addressCountry: "LB" },
-  worksFor: { "@type": "Organization", name: "TheBooker" },
-  alumniOf: { "@type": "CollegeOrUniversity", name: "Lebanese International University" },
-  knowsAbout: ["React", "Next.js", "React Native", "JavaScript", "Admin dashboards", "SEO"],
-  sameAs: [person.github, person.linkedin],
+  "@graph": [
+    {
+      "@type": "Person",
+      "@id": personId,
+      name: person.name,
+      url: siteUrl,
+      image: `${siteUrl}${portrait.src}`,
+      jobTitle: person.role,
+      description: pitch,
+      email: `mailto:${person.email}`,
+      address: { "@type": "PostalAddress", addressCountry: "LB" },
+      worksFor: { "@type": "Organization", name: "TheBooker", url: "https://thebooker.online" },
+      alumniOf: { "@type": "CollegeOrUniversity", name: "Lebanese International University" },
+      knowsAbout: ["React", "Next.js", "React Native", "JavaScript", "Admin dashboards", "SEO"],
+      sameAs: [person.github, person.linkedin],
+    },
+    {
+      "@type": "ProfilePage",
+      "@id": `${siteUrl}/#page`,
+      url: siteUrl,
+      name: `${person.name} | ${person.role}`,
+      mainEntity: { "@id": personId },
+    },
+    ...[featured, ...works].map((p) => ({
+      "@type": "CreativeWork",
+      name: p.name,
+      description: `${p.kind}. ${p.summary}`,
+      ...(p.href && { url: p.href }),
+      keywords: p.stack.join(", "),
+      creator: { "@id": personId },
+    })),
+  ],
 };
 
 const reveal = (i = 0) => ({ "data-reveal": "", style: { ["--i" as string]: i } });
@@ -47,9 +76,6 @@ const navLinks = [
   ["About", "#about"],
   ["Toolkit", "#toolkit"],
 ] as const;
-
-/** One sentence the whole page should leave behind. */
-const pitch = "I build web and mobile apps, and the admin dashboards behind them. I also teach kids to build robots.";
 
 /**
  * Splits a line into letters that rise one after another. Letters are grouped per

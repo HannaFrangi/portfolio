@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import localFont from "next/font/local";
 import { Analytics } from "@vercel/analytics/next";
+import { siteUrl } from "@/lib/site";
 import { themeBootScript } from "@/lib/theme-boot";
 import "./globals.css";
 
@@ -34,13 +35,22 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
   title: "Hanna Al Frangi | React & React Native Developer",
   description:
     "Portfolio of Hanna Al Frangi, a React and React Native developer in Lebanon building web apps, mobile apps, admin dashboards and SaaS products.",
+  alternates: { canonical: "/" },
   openGraph: {
     title: "Hanna Al Frangi | React & React Native Developer",
     description: "Web apps, mobile apps and admin dashboards for real clients.",
     type: "profile",
+    url: "/",
+    siteName: "Hanna Al Frangi",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Hanna Al Frangi | React & React Native Developer",
+    description: "Web apps, mobile apps and admin dashboards for real clients.",
   },
 };
 
