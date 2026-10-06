@@ -1,5 +1,5 @@
 # Dependabot: weekly version updates on top of the security alerts GitHub already sends.
-# Each PR gets its own Vercel preview, which is the check before merging.
+# Vercel skips preview builds for these branches (vercel.json: "dependabot/**": false).
 version: 2
 updates:
   - package-ecosystem: npm
