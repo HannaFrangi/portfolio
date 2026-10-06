@@ -1,0 +1,43 @@
+# Dependabot: weekly version updates on top of the security alerts GitHub already sends.
+# Each PR gets its own Vercel preview, which is the check before merging.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: Asia/Beirut
+    # Let new releases settle before proposing them (a guard against bad or hijacked publishes).
+    cooldown:
+      default-days: 5
+      semver-major-days: 14
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: deps
+      prefix-development: deps-dev
+    # Packages that must move together get one PR; everything else small is batched.
+    groups:
+      next:
+        patterns: ["next", "eslint-config-next", "@next/*"]
+      react:
+        patterns: ["react", "react-dom", "@types/react", "@types/react-dom"]
+      three:
+        patterns: ["three", "@types/three", "@react-three/*"]
+      tailwind:
+        patterns: ["tailwindcss", "@tailwindcss/*"]
+      minor-and-patch:
+        patterns: ["*"]
+        update-types: [minor, patch]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+      timezone: Asia/Beirut
+    commit-message:
+      prefix: ci
+    groups:
+      actions:
+        patterns: ["*"]
