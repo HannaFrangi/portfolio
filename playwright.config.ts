@@ -12,10 +12,11 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
   // Every page renders WebGL in software here, so too many at once starves the 3D.
-  workers: process.env.CI ? 2 : 4,
+  // CI runners have 4 shared cores: one test at a time is slower but doesn't flake.
+  workers: process.env.CI ? 1 : 4,
   reporter: process.env.CI ? [["github"], ["html", { open: "never" }]] : "list",
-  // The 3D scenes need a moment to compile shaders on a software GPU.
-  timeout: 45_000,
+  // The 3D scenes need a moment to compile shaders on a software GPU (more on CI runners).
+  timeout: process.env.CI ? 60_000 : 45_000,
   use: {
     baseURL: `http://localhost:${PORT}`,
     trace: "retain-on-failure",

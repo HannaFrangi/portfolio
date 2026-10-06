@@ -1,11 +1,12 @@
-# Every PR (Dependabot's included) and every push to dev/main: lint, typecheck,
+# Every PR (Dependabot's included) and every push to main: lint, typecheck,
 # production build, then Playwright end-to-end tests against that build.
+# Pushes to dev are covered by their PR, so they don't run it twice.
 name: CI
 
 on:
   pull_request:
   push:
-    branches: [dev, main]
+    branches: [main]
 
 # A newer push to the same branch or PR cancels the run still going.
 concurrency:

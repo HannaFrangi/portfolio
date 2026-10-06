@@ -77,7 +77,7 @@ npm run test:e2e                  # or PW_CHANNEL=chrome npm run test:e2e to use
 
 They check that the page loads without errors and starts the 3D, never scrolls sideways, and that Night shift, build-a-bot, Copy email, the midnight badge, reduced motion, the SEO endpoints, the JSON-LD and the security headers all work.
 
-GitHub Actions (`.github/workflows/ci.yml`) runs lint, typecheck, build and these tests on every pull request and on every push to `dev` and `main`.
+GitHub Actions (`.github/workflows/ci.yml`) runs lint, typecheck, build and these tests on every pull request and on every push to `main`.
 
 ### Environment
 
