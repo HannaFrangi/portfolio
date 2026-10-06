@@ -80,7 +80,6 @@ html {
 :focus-visible {
   outline: 2px solid var(--focus);
   outline-offset: 3px;
-  border-radius: 8px;
 }
 
 /* Components live in a layer so Tailwind utilities (md:hidden, !py-1.5, ...) can override them. */
@@ -287,10 +286,7 @@ html[data-portrait="3d"] .portrait-fallback {
     scroll-behavior: auto;
   }
 
-  /* Hero boot: pill, then the name letter by letter, then the italic line wipes open. */
-  .intro-pill {
-    animation: rise 0.9s var(--ease-out) 0.1s both;
-  }
+  /* Hero boot: the name letter by letter, then the italic line wipes open. */
   .char {
     display: inline-block;
     animation: char-in 0.9s var(--ease-out) both;
@@ -323,11 +319,6 @@ html[data-portrait="3d"] .portrait-fallback {
       opacity 0.9s var(--ease-out),
       transform 1s var(--ease-out);
     transition-delay: calc(var(--i, 0) * 70ms);
-  }
-  html.reveal [data-section] .chip-pop[data-reveal] {
-    transform: translateY(10px) scale(0.7);
-    transition-duration: 0.6s;
-    transition-delay: calc(var(--i, 0) * 35ms);
   }
   html.reveal [data-section][data-shown] [data-reveal] {
     opacity: 1;
@@ -545,4 +536,32 @@ html[data-portrait="3d"] .portrait-fallback {
   /* Different tile sizes so the pattern never reads as a grid. */
   background-size: 260px 260px, 330px 330px, 370px 370px, 290px 290px, 410px 410px, 250px 250px, auto, auto, auto;
   background-attachment: fixed, fixed, fixed, fixed, fixed, fixed, scroll, scroll, scroll;
+}
+
+/* Reduced motion: the pinned sections have nothing left to play, so they stop pinning.
+   The Works rail no longer slides either, so its cards wrap into a grid instead of being
+   clipped off to the right. Unlayered, so it beats the md: utilities. */
+@media (prefers-reduced-motion: reduce) and (min-width: 768px) {
+  #work,
+  #works {
+    height: auto;
+  }
+  #work > div,
+  #works > div {
+    position: static;
+    height: auto;
+    overflow: visible;
+  }
+  #work > div {
+    padding-block: 6rem;
+  }
+  #works > div {
+    padding-block: 4rem;
+  }
+  #works [data-rail] {
+    flex-wrap: wrap;
+  }
+  #work .pin-progress {
+    display: none;
+  }
 }

@@ -311,11 +311,11 @@ function Featured() {
             )}
           </div>
         </div>
-        {/* The 3D bleeds past its column (right to the viewport edge, and down past the
-            box) so nothing is sliced mid-page; the scene re-frames itself to compensate. */}
+        {/* The 3D bleeds past its column (left into the gutter, right to the viewport edge, and
+            down past the box) so nothing is sliced mid-page; the scene re-frames itself to compensate. */}
         <div className="relative h-[420px] md:h-[78vh]">
           <FeaturedSpot
-            className="absolute -bottom-16 left-0 right-0 top-0 md:-bottom-[11vh] md:right-[calc(-1*max(1rem,50vw-36rem))]"
+            className="absolute -bottom-16 -left-4 -right-4 top-0 md:-bottom-[11vh] md:-left-[10vw] md:right-[calc(-1*max(1rem,50vw-36rem))]"
             screen={featured.screen}
           />
         </div>

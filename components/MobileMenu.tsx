@@ -7,10 +7,16 @@ import { Arrow } from "./icons";
 export default function MobileMenu({ links, github }: { links: readonly (readonly [string, string])[]; github: string }) {
   const [open, setOpen] = useState(false);
   const panel = useRef<HTMLDivElement>(null);
+  const toggle = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     if (!open) return;
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    // Escape closes and hands focus back to the button, so keyboard users aren't dropped on <body>.
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      setOpen(false);
+      toggle.current?.focus();
+    };
     const onClick = (e: MouseEvent) => {
       if (!panel.current?.parentElement?.contains(e.target as Node)) setOpen(false);
     };
@@ -25,6 +31,7 @@ export default function MobileMenu({ links, github }: { links: readonly (readonl
   return (
     <div className="md:hidden">
       <button
+        ref={toggle}
         type="button"
         aria-expanded={open}
         aria-controls="mobile-menu"

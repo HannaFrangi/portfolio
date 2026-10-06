@@ -481,7 +481,8 @@ function ClosingScene({
       d.lookY = pointer.sy * 0.4;
       r.position.x = lerp(
         halfW + 1.5,
-        Math.min(3.1, halfW - 0.95),
+        // 1.3 in from the edge leaves room for the waving arm on narrow screens.
+        Math.min(3.1, halfW - 1.3),
         easeOut(walk),
       );
       r.rotation.y = walk < 1 ? -1.2 : damp(r.rotation.y, -0.4, dt, 4);
