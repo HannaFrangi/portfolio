@@ -14,6 +14,14 @@ updates:
       default-days: 5
       semver-major-days: 14
     open-pull-requests-limit: 5
+    # Majors the lint toolchain can't take yet (checked 2026-10-06); revisit when eslint-config-next moves.
+    ignore:
+      # typescript-eslint (inside eslint-config-next) supports TypeScript >=4.8.4 <6.1.0.
+      - dependency-name: typescript
+        versions: [">=6.1.0"]
+      # eslint-plugin-react (inside eslint-config-next) crashes on ESLint 10 (getFilename was removed).
+      - dependency-name: eslint
+        update-types: ["version-update:semver-major"]
     commit-message:
       prefix: deps
       prefix-development: deps-dev
