@@ -1,5 +1,6 @@
 import { Fragment } from "react";
 import Image from "next/image";
+import CopyEmail from '@/components/CopyEmail';
 import EasterEggs from '@/components/EasterEggs';
 import MobileMenu from "@/components/MobileMenu";
 import Reveal from "@/components/Reveal";
@@ -76,7 +77,8 @@ const jsonLd = {
       description: `${p.kind}. ${p.summary}`,
       ...(p.href && { url: p.href }),
       keywords: p.stack.join(", "),
-      creator: { "@id": personId },
+      // Team projects credit Hanna as a contributor, solo ones as the creator.
+      [p.role.startsWith("Team") ? "contributor" : "creator"]: { "@id": personId },
     })),
   ],
 };
@@ -195,10 +197,14 @@ function Hero() {
         {/* Phones: the portrait fills the lower screen, so the pitch sits under the title. */}
         <p className='intro-late mx-auto mt-4 max-w-xs text-[0.95rem] leading-6 text-ink-soft md:hidden'>
           {pitch}
+          <span className='mt-1 block text-sm font-medium text-olive'>
+            2+ years shipping production apps.
+          </span>
         </p>
         {/* Availability and the action, right under the name where a recruiter is looking. */}
         <div className='intro-late mt-5 flex flex-wrap items-center justify-center gap-3'>
-          <p className='pill pill-soft !text-[0.8rem] text-olive'>
+          {/* A status, not a button: no pill chrome or hover lift, so it never reads as clickable. */}
+          <p className='inline-flex items-center gap-2 rounded-full bg-surface/55 px-3.5 py-2 text-[0.8rem] font-medium text-olive backdrop-blur-sm'>
             <span
               aria-hidden
               className='relative size-2 rounded-full bg-accent dot-pulse'
@@ -362,6 +368,12 @@ function Works() {
                   <p className='mt-1 text-sm text-ink-soft'>
                     {w.kind} · {w.role}
                   </p>
+                  {w.live && (
+                    <p className='mt-2 flex items-center gap-2 text-sm font-medium text-olive'>
+                      <span aria-hidden className='size-1.5 shrink-0 rounded-full bg-moss' />
+                      {w.live}
+                    </p>
+                  )}
                   <p className='mt-3 text-[0.95rem] leading-6 text-ink-soft'>
                     {w.summary}
                   </p>
@@ -628,7 +640,8 @@ function Closing() {
             </svg>
           </a>
         </div>
-        <p {...reveal(3)} className="mt-6 flex justify-center gap-6 text-sm">
+        <p {...reveal(3)} className="mt-6 flex flex-wrap justify-center gap-x-6 gap-y-3 text-sm">
+          <CopyEmail email={person.email} />
           <a href={person.github} target="_blank" rel="noopener noreferrer" className="link">
             GitHub <Arrow />
           </a>
