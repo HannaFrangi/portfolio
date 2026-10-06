@@ -13,6 +13,8 @@
   --ink: #13180a;
   --ink-soft: #55524a;
   --accent: #e0703a;
+  /* Keyboard focus ring: olive is ~6:1 on mist (orange is only ~2.4:1, under WCAG's 3:1). */
+  --focus: var(--olive);
   /* Surfaces vs. on-dark text: --paper is always the light text on olive/dark panels. */
   --surface: #f5f2ea;
   --hairline: rgb(255 255 255 / 0.8);
@@ -76,7 +78,7 @@ html {
 }
 
 :focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--focus);
   outline-offset: 3px;
   border-radius: 8px;
 }
@@ -399,6 +401,8 @@ html[data-portrait="3d"] .portrait-fallback {
   --ink: #ede8dc;
   --ink-soft: #b5af9f;
   --accent: #f08a50;
+  /* At night the orange lamp is the brightest thing on the page, so it can carry focus. */
+  --focus: var(--accent);
   color-scheme: dark;
 }
 

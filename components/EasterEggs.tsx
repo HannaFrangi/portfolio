@@ -25,7 +25,7 @@ function greet() {
     `%cThis site:%c Next.js, React Three Fiber, one shared WebGL canvas for every 3D scene.\n` +
       `%cHiring a React / React Native dev?%c ${person.email}\n` +
       `%cCV:%c ${location.origin}${person.cv}\n` +
-      `%cPsst:%c the robot at the bottom of the page likes being clicked.`,
+      `%cPsst:%c click or tap the robot at the bottom of the page.`,
     accent, plain, accent, plain, accent, plain, accent, plain,
   );
 }
