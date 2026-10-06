@@ -7,6 +7,14 @@ import { PerformanceMonitor, View } from "@react-three/drei";
 import { degradeQuality, getQuality, useQuality } from "@/lib/quality";
 import { pointer } from "./kit";
 
+// R3F (9.8.1, latest) still creates a THREE.Clock for state.clock, which three r183+ flags as
+// deprecated on every canvas. Mute only that line; every other three.js message goes through.
+// Drop this once R3F switches to THREE.Timer.
+THREE.setConsoleFunction((type, message, ...params) => {
+  if (type === "warn" && message.startsWith("THREE.Clock:")) return;
+  console[type](message, ...params);
+});
+
 function PointerSmoother() {
   useFrame((_, delta) => {
     const k = 1 - Math.exp(-Math.min(delta, 1 / 30) * 4);

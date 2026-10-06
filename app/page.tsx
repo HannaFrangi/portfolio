@@ -1,5 +1,7 @@
 import { Fragment } from "react";
 import Image from "next/image";
+import CopyEmail from '@/components/CopyEmail';
+import EasterEggs from '@/components/EasterEggs';
 import MobileMenu from "@/components/MobileMenu";
 import Reveal from "@/components/Reveal";
 import RobotBuilder from "@/components/RobotBuilder";
@@ -13,6 +15,7 @@ import { ClosingSpot, DeviceSpot, FeaturedSpot, HeroSpot } from "@/components/th
 import {
   certificates,
   clients,
+  currently,
   education,
   experience,
   featured,
@@ -74,7 +77,8 @@ const jsonLd = {
       description: `${p.kind}. ${p.summary}`,
       ...(p.href && { url: p.href }),
       keywords: p.stack.join(", "),
-      creator: { "@id": personId },
+      // Team projects credit Hanna as a contributor, solo ones as the creator.
+      [p.role.startsWith("Team") ? "contributor" : "creator"]: { "@id": personId },
     })),
   ],
 };
@@ -154,43 +158,60 @@ function Nav() {
 function Hero() {
   return (
     <section
-      id="top"
-      data-progress="leave"
-      aria-labelledby="hero-title"
-      className="relative isolate h-[100svh] min-h-[640px] overflow-hidden"
-    >
+      id='top'
+      data-progress='leave'
+      aria-labelledby='hero-title'
+      className='relative isolate h-[100svh] min-h-160 overflow-hidden'>
       {/* Far plane: generated space-age landscape. It sits under the headline, which sits
           under the WebGL portrait and blobs: landscape, type, subject, foreground. */}
-      <div aria-hidden className="plate absolute inset-0 -z-10">
-        <div className="plate-drift absolute inset-[-6%]">
-          <Image src={heroPlate} alt="" fill preload placeholder="blur" sizes="100vw" className="object-cover object-[50%_62%]" />
+      <div aria-hidden className='plate absolute inset-0 -z-10'>
+        <div className='plate-drift absolute inset-[-6%]'>
+          <Image
+            src={heroPlate}
+            alt=''
+            fill
+            preload
+            placeholder='blur'
+            sizes='100vw'
+            className='object-cover object-[50%_62%]'
+          />
         </div>
       </div>
       {/* Outside the moving plate, so the hero always melts into the page below. */}
-      <div aria-hidden className="absolute inset-x-0 bottom-0 -z-10 h-1/3 bg-gradient-to-b from-transparent to-mist" />
-      <div className="absolute inset-x-0 top-[12vh] px-4 text-center max-md:top-[13vh]">
-        <h1 id="hero-title">
+      <div
+        aria-hidden
+        className='absolute inset-x-0 bottom-0 -z-10 h-1/3 bg-gradient-to-b from-transparent to-mist'
+      />
+      <div className='absolute inset-x-0 top-[12vh] px-4 text-center max-md:top-[13vh]'>
+        <h1 id='hero-title'>
           <Kinetic
             text={`Hi, I'm ${person.first}`}
             srText={`Hi, I'm ${person.first},`}
             offset={0}
-            className="block font-display text-[clamp(2.8rem,7.4vw,7rem)] font-extrabold leading-[0.95] tracking-[-0.03em] text-moss"
+            className='block font-display text-[clamp(2.8rem,7.4vw,7rem)] font-extrabold leading-[0.95] tracking-[-0.03em] text-moss'
           />
-          <span className="wipe-in mt-1 block font-serif text-[clamp(2rem,5vw,4.6rem)] italic leading-[1] tracking-[-0.01em]">
+          <span className='wipe-in mt-1 block font-serif text-[clamp(2rem,5vw,4.6rem)] italic leading-[1] tracking-[-0.01em]'>
             React &amp; React Native Developer
           </span>
         </h1>
         {/* Phones: the portrait fills the lower screen, so the pitch sits under the title. */}
-        <p className="intro-late mx-auto mt-4 max-w-xs text-[0.95rem] leading-6 text-ink-soft md:hidden">
+        <p className='intro-late mx-auto mt-4 max-w-xs text-[0.95rem] leading-6 text-ink-soft md:hidden'>
           {pitch}
+          <span className='mt-1 block text-sm font-medium text-olive'>
+            2+ years shipping production apps.
+          </span>
         </p>
         {/* Availability and the action, right under the name where a recruiter is looking. */}
-        <div className="intro-late mt-5 flex flex-wrap items-center justify-center gap-3">
-          <p className="pill pill-soft !text-[0.8rem] text-olive">
-            <span aria-hidden className="relative size-2 rounded-full bg-accent dot-pulse" />
+        <div className='intro-late mt-5 flex flex-wrap items-center justify-center gap-3'>
+          {/* A status, not a button: no pill chrome or hover lift, so it never reads as clickable. */}
+          <p className='inline-flex items-center gap-2 rounded-full bg-surface/55 px-3.5 py-2 text-[0.8rem] font-medium text-olive backdrop-blur-sm'>
+            <span
+              aria-hidden
+              className='relative size-2 rounded-full bg-accent dot-pulse'
+            />
             Open to React &amp; React Native roles · {person.location}
           </p>
-          <a href="#work" className="pill pill-solid">
+          <a href='#work' className='pill pill-solid'>
             See my work <Arrow />
           </a>
         </div>
@@ -198,16 +219,27 @@ function Hero() {
 
       {/* Static portrait: shows at once (and if WebGL is unavailable), then hands over to the
           3D one, which sets html[data-portrait="3d"] when it exists. */}
-      <div aria-hidden className="portrait-fallback pointer-events-none absolute inset-x-0 bottom-0 top-[34%] flex justify-center">
-        <Image src={portrait} alt="" loading="eager" fetchPriority="high" sizes="(min-width: 768px) 40vw, 80vw" className="h-[140%] w-auto max-w-none object-contain object-top" />
+      <div
+        aria-hidden
+        className='portrait-fallback pointer-events-none absolute inset-x-0 bottom-0 top-[34%] flex justify-center'>
+        <Image
+          src={portrait}
+          alt=''
+          loading='eager'
+          fetchPriority='high'
+          sizes='(min-width: 768px) 40vw, 80vw'
+          className='h-[140%] w-auto max-w-none object-contain object-top'
+        />
       </div>
 
-      <HeroSpot className="absolute inset-0" />
+      <HeroSpot className='absolute inset-0' />
 
-      <div className="intro-late absolute bottom-10 right-6 hidden max-w-[21rem] text-right md:block lg:right-12">
-        <p className="pill-soft rounded-2xl px-5 py-4 text-[1rem] leading-7 text-ink">
+      <div className='intro-late absolute bottom-10 right-6 hidden max-w-[21rem] text-right md:block lg:right-12'>
+        <p className='pill-soft rounded-2xl px-5 py-4 text-[1rem] leading-7 text-ink'>
           {pitch}
-          <span className="mt-1 block text-sm font-medium text-olive">2+ years shipping production apps.</span>
+          <span className='mt-1 block text-sm font-medium text-olive'>
+            2+ years shipping production apps.
+          </span>
         </p>
       </div>
     </section>
@@ -279,11 +311,11 @@ function Featured() {
             )}
           </div>
         </div>
-        {/* The 3D bleeds past its column (right to the viewport edge, and down past the
-            box) so nothing is sliced mid-page; the scene re-frames itself to compensate. */}
+        {/* The 3D bleeds past its column (left into the gutter, right to the viewport edge, and
+            down past the box) so nothing is sliced mid-page; the scene re-frames itself to compensate. */}
         <div className="relative h-[420px] md:h-[78vh]">
           <FeaturedSpot
-            className="absolute -bottom-16 left-0 right-0 top-0 md:-bottom-[11vh] md:right-[calc(-1*max(1rem,50vw-36rem))]"
+            className="absolute -bottom-16 -left-4 -right-4 top-0 md:-bottom-[11vh] md:-left-[10vw] md:right-[calc(-1*max(1rem,50vw-36rem))]"
             screen={featured.screen}
           />
         </div>
@@ -317,48 +349,75 @@ function Works() {
                 tabIndex={w.href ? undefined : 0}
                 aria-labelledby={`work-${w.id}`}
                 className={`clay clay-lift flex shrink-0 flex-col overflow-hidden p-3 ${
-                  feature ? "md:w-[min(760px,54vw)] md:flex-row" : "md:w-[min(540px,40vw)]"
-                }`}
-              >
+                  feature
+                    ? 'md:w-[min(760px,54vw)] md:flex-row'
+                    : 'md:w-[min(540px,40vw)]'
+                }`}>
                 <DeviceSpot
-                  className={`relative h-[250px] shrink-0 rounded-[20px] bg-gradient-to-b from-mist/70 to-cream/40 ${
-                    feature ? "md:h-auto md:w-[52%]" : "md:h-[38vh]"
+                  className={`relative h-62.5 shrink-0 rounded-[20px] bg-linear-to-b from-mist/70 to-cream/40 ${
+                    feature ? 'md:h-auto md:w-[52%]' : 'md:h-[38vh]'
                   }`}
                   project={w}
                 />
-                <div className="flex flex-1 flex-col px-3 pb-3 pt-5 md:px-5">
-                  <h3 id={`work-${w.id}`} className="font-display text-2xl font-bold tracking-[-0.02em]">{w.name}</h3>
-                  <p className="mt-1 text-sm text-ink-soft">
+                <div className='flex flex-1 flex-col px-3 pb-3 pt-5 md:px-5'>
+                  <h3
+                    id={`work-${w.id}`}
+                    className='font-display text-2xl font-bold tracking-[-0.02em]'>
+                    {w.name}
+                  </h3>
+                  <p className='mt-1 text-sm text-ink-soft'>
                     {w.kind} · {w.role}
                   </p>
-                  <p className="mt-3 text-[0.95rem] leading-6 text-ink-soft">{w.summary}</p>
+                  {w.live && (
+                    <p className='mt-2 flex items-center gap-2 text-sm font-medium text-olive'>
+                      <span aria-hidden className='size-1.5 shrink-0 rounded-full bg-moss' />
+                      {w.live}
+                    </p>
+                  )}
+                  <p className='mt-3 text-[0.95rem] leading-6 text-ink-soft'>
+                    {w.summary}
+                  </p>
                   {feature && (
-                    <ul className="mt-4 space-y-2 text-[0.92rem] leading-6">
+                    <ul className='mt-4 space-y-2 text-[0.92rem] leading-6'>
                       {w.points.map((p) => (
-                        <li key={p} className="flex gap-3">
-                          <span aria-hidden className="mt-2 size-1.5 shrink-0 rounded-full bg-accent" />
+                        <li key={p} className='flex gap-3'>
+                          <span
+                            aria-hidden
+                            className='mt-2 size-1.5 shrink-0 rounded-full bg-accent'
+                          />
                           {p}
                         </li>
                       ))}
                     </ul>
                   )}
-                  <div className="mt-4 flex flex-wrap gap-2">
+                  <div className='mt-4 flex flex-wrap gap-2'>
                     {w.stack.map((s) => (
-                      <span key={s} className="chip">
+                      <span key={s} className='chip'>
                         {s}
                       </span>
                     ))}
                   </div>
-                  <div className="mt-auto flex flex-wrap gap-x-5 pt-5">
+                  <div className='mt-auto flex flex-wrap gap-x-5 pt-5'>
                     {w.href ? (
-                      <a href={w.href} target="_blank" rel="noopener noreferrer" className="link">
+                      <a
+                        href={w.href}
+                        target='_blank'
+                        rel='noopener noreferrer'
+                        className='link'>
                         {w.hrefLabel} <Arrow />
                       </a>
                     ) : (
-                      <span className="text-sm text-ink-soft">Private SaaS, no public link</span>
+                      <span className='text-sm text-ink-soft'>
+                        Private SaaS, no public link
+                      </span>
                     )}
                     {w.links?.map((l) => (
-                      <a key={l.href} href={l.href} target="_blank" rel="noopener noreferrer" className="link">
+                      <a
+                        key={l.href}
+                        href={l.href}
+                        target='_blank'
+                        rel='noopener noreferrer'
+                        className='link'>
                         {l.label} <Arrow />
                       </a>
                     ))}
@@ -484,6 +543,15 @@ function About() {
               and programming at RoboStars, including kids with special needs. Currently studying for an MSc in Computer
               Science.
             </p>
+            <h3 className="mt-8 font-display text-base font-semibold tracking-wide text-paper">Currently</h3>
+            <dl className="mt-3 divide-y divide-paper/20 border-y border-paper/20">
+              {currently.map((c, i) => (
+                <div key={c.label} {...reveal(1 + i)} className="grid grid-cols-[5.5rem_1fr] gap-x-4 py-3">
+                  <dt className="text-sm text-paper/85">{c.label}</dt>
+                  <dd className="font-medium">{c.value}</dd>
+                </div>
+              ))}
+            </dl>
           </div>
           <div className="about-panel space-y-8">
             <div>
@@ -572,7 +640,8 @@ function Closing() {
             </svg>
           </a>
         </div>
-        <p {...reveal(3)} className="mt-6 flex justify-center gap-6 text-sm">
+        <p {...reveal(3)} className="mt-6 flex flex-wrap justify-center gap-x-6 gap-y-3 text-sm">
+          <CopyEmail email={person.email} />
           <a href={person.github} target="_blank" rel="noopener noreferrer" className="link">
             GitHub <Arrow />
           </a>
@@ -595,15 +664,17 @@ export default function Home() {
   return (
     <>
       <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
+        type='application/ld+json'
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c'),
+        }}
       />
       <StageMount />
       <SmoothScroll />
       <ScrollDriver />
       <Reveal />
       <Nav />
-      <main id="main">
+      <main id='main'>
         <Hero />
         <Clients />
         <Featured />
@@ -614,6 +685,7 @@ export default function Home() {
         <RobotBuilder />
         <Closing />
       </main>
+      <EasterEggs />
     </>
   );
 }

@@ -29,6 +29,8 @@ export type Project = {
   screen: string;
   /** For the phone + tablet pair: the desktop capture shown on the tablet behind. */
   backScreen?: string;
+  /** A short "this is in production" line shown under the name, e.g. for store apps. */
+  live?: string;
   /** Extra links shown after the main one, e.g. app store listings. */
   links?: { label: string; href: string }[];
 };
@@ -60,10 +62,11 @@ export const works: Project[] = [
     summary:
       "A full booking solution for spas, barbers, hair stylists and massage therapists: customers find a service, see live availability, book and get reminded, and businesses run it all from their dashboard.",
     points: [
-      "Mobile app in React Native, live on the App Store and Google Play.",
-      "Web: the landing page, the admin dashboard and the business dashboard.",
+      "Web: built the landing page, the admin dashboard and the business dashboard.",
+      "Mobile: maintain and improve the live React Native app, fixing production bugs and shipping enhancements.",
     ],
-    role: "Team project: mobile app and web",
+    role: "Team project: built the web side, maintain the app",
+    live: "Live on the App Store and Google Play",
     stack: ["React Native", "React", "Dashboards"],
     href: "https://thebooker.online",
     hrefLabel: "thebooker.online",
@@ -149,6 +152,12 @@ export const experience = [
 export const education = [
   { title: "MSc Computer Science", place: "Lebanese International University", period: "2025 to now" },
   { title: "BSc Computer Science", place: "Lebanese International University", period: "2021 to 2025" },
+];
+
+/** What's on the go right now. Small and personal on purpose: update a line whenever it changes. */
+export const currently = [
+  { label: "Building", value: "The RoboStars React Native app and its dashboard, front and back end" },
+  { label: "Learning", value: "Working toward a Claude certification" },
 ];
 
 /** Teaching credential, alongside the Cisco networking certificates below. */

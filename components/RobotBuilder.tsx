@@ -40,31 +40,18 @@ export default function RobotBuilder() {
           </h2>
           <p data-reveal className="mt-4 max-w-md leading-7 text-ink-soft">
             I teach kids to build robots at RoboStars. Your turn: drag the pieces onto the outline and they click into
-            place. Using a keyboard? &ldquo;Build it for me&rdquo; assembles it in one go.
+            place.
+            {/* Touch screens never need the keyboard route, so they don't hear about it. */}
+            {!coarse && <> Using a keyboard? &ldquo;Build it for me&rdquo; assembles it in one go.</>}
           </p>
-          <p aria-live="polite" className="mt-6 font-display text-lg font-bold text-olive">
-            {done ? (
-              <>Built! That&apos;s the RoboStars logo, by the way.</>
-            ) : (
-              <>
-                {placed} / {PIECES} pieces
-              </>
+          {/* The pieces start scattered, so "Start over" only appears once there's something to undo;
+              until then dragging is the action and auto-build is the quiet way out. */}
+          <div className="mt-7 flex min-h-11 flex-wrap items-center gap-5">
+            {(placed > 0 || done) && (
+              <button type="button" onClick={() => setCommand((c) => ({ type: "scatter", n: c.n + 1 }))} className="pill pill-solid">
+                {done ? "Build it again" : "Start over"}
+              </button>
             )}
-          </p>
-          {/* progress rail: one pip per piece */}
-          <div aria-hidden className="mt-3 flex gap-1.5">
-            {Array.from({ length: PIECES }, (_, i) => (
-              <span
-                key={i}
-                className={`h-1.5 w-8 rounded-full transition-colors duration-500 ${i < placed ? "bg-accent" : "bg-sand/60"}`}
-              />
-            ))}
-          </div>
-          {/* Playing is the point: "Scatter" is the button, auto-build is the quiet way out. */}
-          <div className="mt-7 flex flex-wrap items-center gap-5">
-            <button type="button" onClick={() => setCommand((c) => ({ type: "scatter", n: c.n + 1 }))} className="pill pill-solid">
-              {done ? "Build it again" : "Scatter pieces"}
-            </button>
             <button
               type="button"
               disabled={done}
@@ -83,6 +70,21 @@ export default function RobotBuilder() {
             interactive={interactive}
             onProgress={setPlaced}
           />
+          {/* Progress lives on the board, so it stays in view while you play (phones scroll the copy away). */}
+          <div className="pointer-events-none absolute left-4 top-4 max-w-[60%] md:left-5 md:top-5">
+            <p aria-live="polite" className="font-display text-base font-bold leading-snug text-olive">
+              {done ? <>Built! That&apos;s the RoboStars logo.</> : <>{placed} / {PIECES} pieces</>}
+            </p>
+            {/* progress rail: one pip per piece */}
+            <div aria-hidden className="mt-2 flex gap-1">
+              {Array.from({ length: PIECES }, (_, i) => (
+                <span
+                  key={i}
+                  className={`h-1.5 w-5 rounded-full transition-colors duration-500 ${i < placed ? "bg-accent" : "bg-sand/60"}`}
+                />
+              ))}
+            </div>
+          </div>
           {coarse &&
             (playing ? (
               <button type="button" onClick={() => setPlaying(false)} className="pill pill-soft absolute right-3 top-3 !py-1.5 !text-xs">
