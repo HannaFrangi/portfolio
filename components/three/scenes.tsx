@@ -1,6 +1,13 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useRef, type RefObject } from "react";
+import {
+  Suspense,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type RefObject,
+} from 'react';
 import type { ThreeEvent } from "@react-three/fiber";
 import * as THREE from "three";
 import { useFrame, useThree } from "@react-three/fiber";
@@ -16,9 +23,8 @@ import {
   palette,
   pinsActive,
   pointer,
-  scrollProgress,
   sectionProgress,
-} from "./kit";
+} from './kit';
 import {
   Blob,
   Laptop,
@@ -266,18 +272,39 @@ function FeaturedScene({ spot, screen }: { spot: RefObject<HTMLElement | null>; 
 /**
  * Where a work card is on its own timeline. On desktop the cards ride a sideways
  * rail, so their horizontal position drives entry and screen scroll; phones use
- * ordinary vertical scroll.
+ * ordinary vertical scroll. The screen sits at the top of the site while its card
+ * arrives and reaches the bottom as the card leaves, so nobody lands mid-page.
  */
-function cardTimeline(card: Element | null) {
+function cardTimeline(card: Element | null, box: Element | null) {
   if (!card) return { enter: 0, scroll: 0 };
   const r = card.getBoundingClientRect();
   const vw = window.innerWidth, vh = window.innerHeight;
   const vertical = clamp01((vh - r.top) / (r.height * 0.6));
   if (pinsActive()) {
     const horizontal = clamp01((vw - r.left) / (r.width * 0.7));
-    return { enter: Math.min(vertical, horizontal), scroll: clamp01((vw - (r.left + r.width * 0.4)) / vw) };
+    const rail = card.closest<HTMLElement>('[data-rail]');
+    const frame = rail?.parentElement;
+    if (!rail || !frame)
+      return { enter: Math.min(vertical, horizontal), scroll: 0 };
+    // The card's right edge before the rail moved, and where the rail's full travel leaves it.
+    const rest =
+      r.right -
+      (rail.getBoundingClientRect().left - frame.getBoundingClientRect().left);
+    const travel = Math.max(0, rail.scrollWidth - rail.clientWidth);
+    // Top once the card is fully in view (or from the start, if it begins in view);
+    // bottom once it reaches the left edge or the rail runs out.
+    const start = Math.min(vw, rest);
+    const end = Math.max(r.width, rest - travel);
+    const scroll =
+      start - end > 1 ? clamp01((start - r.right) / (start - end)) : 0;
+    return { enter: Math.min(vertical, horizontal), scroll };
   }
-  return { enter: vertical, scroll: scrollProgress(card) };
+  // Phones: cards are nearly a screen tall, so time it off the device box: top once the
+  // whole box is on screen, bottom as it slides under the header.
+  const b = (box ?? card).getBoundingClientRect();
+  const start = Math.max(vh - b.height, vh * 0.35);
+  const end = 80;
+  return { enter: vertical, scroll: clamp01((start - b.top) / (start - end)) };
 }
 
 /** Rough width x height of each device arrangement at scale 1, for framing. */
@@ -298,7 +325,7 @@ function DeviceScene({ project, spot }: { project: Project; spot: RefObject<HTML
     // Hover and entry follow the whole card, not just the 3D box.
     const card = spot.current?.closest("article") ?? null;
     const hover = !motion.reduced && !!card?.matches(":hover");
-    const { enter, scroll } = motion.reduced ? { enter: 1, scroll: 0.3 } : cardTimeline(card);
+    const { enter, scroll } = motion.reduced ? { enter: 1, scroll: 0.3 } : cardTimeline(card, spot.current);
     screenScroll.current = damp(screenScroll.current, scroll, dt, 6);
     const e = easeOut(enter);
     const t = motion.reduced ? 0 : state.clock.elapsedTime;
@@ -371,22 +398,53 @@ const MOONS = [
   { seed: 27, color: palette.cream, size: 0.18, from: [6.5, 0.5, -2] },
 ] as const;
 
+/** What the closing robot does when clicked; `n` changes on every poke so the scene notices. */
+type Poke = { n: number; kind: "hop" | "spin" | "sleep" | "wake" };
+
 /**
  * The resolve: loose blobs fly in from off-screen and fall into orbit around the planet,
- * and a robot walks in on the right to wave the visitor off.
+ * and a robot walks in on the right to wave the visitor off. Clicking the robot is an easter egg.
  */
-function ClosingScene({ spot }: { spot: RefObject<HTMLElement | null> }) {
+function ClosingScene({
+  spot,
+  pokeRef,
+  onPoke,
+  bubbleRef,
+}: {
+  spot: RefObject<HTMLElement | null>;
+  pokeRef: RefObject<Poke>;
+  onPoke: () => void;
+  bubbleRef: RefObject<HTMLDivElement | null>;
+}) {
   const planet = useRef<THREE.Group>(null);
   const moons = useRef<(THREE.Group | null)[]>([]);
   const gather = useRef(0);
   const robot = useRef<THREE.Group>(null);
-  const robotDrive = useRef<RobotDrive>({ walking: 0, waving: 0, lookX: 0, lookY: 0 });
+  const robotDrive = useRef<RobotDrive>({
+    walking: 0,
+    waving: 0,
+    lookX: 0,
+    lookY: 0,
+    sleep: 0,
+  });
+  // The click reaction plays on an inner group, so it never fights the walk-in.
+  const hop = useRef<THREE.Group>(null);
+  const reaction = useRef({
+    seen: 0,
+    kind: 'hop' as Poke['kind'],
+    start: -10,
+    asleep: false,
+  });
+  const head = useMemo(() => new THREE.Vector3(), []);
 
   useFrame((state, delta) => {
     const dt = Math.min(delta, 1 / 30);
     // Half the visible width at the planet's depth: keeps the robot on narrow screens.
-    const halfW = 9 * Math.tan((15 * Math.PI) / 180) * (state.size.width / state.size.height);
-    const section = spot.current?.closest("section") ?? null;
+    const halfW =
+      9 *
+      Math.tan((15 * Math.PI) / 180) *
+      (state.size.width / state.size.height);
+    const section = spot.current?.closest('section') ?? null;
     let target = 1;
     if (!motion.reduced && section) {
       const r = section.getBoundingClientRect();
@@ -397,19 +455,59 @@ function ClosingScene({ spot }: { spot: RefObject<HTMLElement | null> }) {
     const t = motion.reduced ? 0 : state.clock.elapsedTime;
     if (planet.current) {
       planet.current.rotation.y = t * 0.15;
-      planet.current.position.x = damp(planet.current.position.x, motion.reduced ? 0 : pointer.sx * 0.2, dt);
+      planet.current.position.x = damp(
+        planet.current.position.x,
+        motion.reduced ? 0 : pointer.sx * 0.2,
+        dt,
+      );
     }
     // Walks in once the planet has mostly gathered, turns to the visitor and waves.
     const r = robot.current;
     if (r) {
       const walk = motion.reduced ? 1 : clamp01((gather.current - 0.45) / 0.45);
       const d = robotDrive.current;
+      const re = reaction.current;
+      if (pokeRef.current.n !== re.seen) {
+        re.seen = pokeRef.current.n;
+        re.kind = pokeRef.current.kind;
+        re.start = state.clock.elapsedTime;
+        if (re.kind === 'sleep') re.asleep = true;
+        if (re.kind === 'wake') re.asleep = false;
+      }
       d.walking = walk > 0 && walk < 1 ? 1 : 0;
-      d.waving = damp(d.waving, walk >= 1 ? 1 : 0, dt, 4);
+      d.waving = damp(d.waving, walk >= 1 && !re.asleep ? 1 : 0, dt, 4);
+      d.sleep = damp(d.sleep ?? 0, re.asleep ? 1 : 0, dt, 3);
       d.lookX = pointer.sx * 0.6;
       d.lookY = pointer.sy * 0.4;
-      r.position.x = lerp(halfW + 1.5, Math.min(3.1, halfW - 0.95), easeOut(walk));
+      r.position.x = lerp(
+        halfW + 1.5,
+        Math.min(3.1, halfW - 0.95),
+        easeOut(walk),
+      );
       r.rotation.y = walk < 1 ? -1.2 : damp(r.rotation.y, -0.4, dt, 4);
+
+      // Hop on a click; the fifth click is a full spin; waking up is a startled hop.
+      const h = hop.current;
+      if (h) {
+        const u =
+          (state.clock.elapsedTime - re.start) /
+          (re.kind === 'spin' ? 0.9 : 0.45);
+        const active =
+          !motion.reduced && u >= 0 && u < 1 && re.kind !== 'sleep';
+        h.position.y = active
+          ? Math.sin(Math.PI * u) * (re.kind === 'spin' ? 0.9 : 0.5)
+          : 0;
+        h.rotation.y =
+          active && re.kind === 'spin' ? easeInOut(u) * Math.PI * 2 : 0;
+
+        // Pin the speech bubble just above the robot's head.
+        const b = bubbleRef.current;
+        const box = spot.current?.getBoundingClientRect();
+        if (b && box) {
+          h.localToWorld(head.set(0, 3.1, 0)).project(state.camera);
+          b.style.transform = `translate(${((head.x + 1) / 2) * box.width}px, ${((1 - head.y) / 2) * box.height}px)`;
+        }
+      }
     }
     MOONS.forEach((m, i) => {
       const moon = moons.current[i];
@@ -417,25 +515,58 @@ function ClosingScene({ spot }: { spot: RefObject<HTMLElement | null> }) {
       const a = (i / MOONS.length) * Math.PI * 2 + t * 0.35 * g;
       const radius = 2.1 + (i % 3) * 0.3;
       // A tilted orbital plane, like the chrome rings.
-      const ox = Math.cos(a) * radius, oz = Math.sin(a) * radius;
+      const ox = Math.cos(a) * radius,
+        oz = Math.sin(a) * radius;
       const oy = oz * 0.28;
-      moon.position.set(lerp(m.from[0], ox, g), lerp(m.from[1], oy, g), lerp(m.from[2], oz * 0.6, g));
-      moon.scale.setScalar(Math.max(0.001, easeOut(clamp01(gather.current * 1.4))));
+      moon.position.set(
+        lerp(m.from[0], ox, g),
+        lerp(m.from[1], oy, g),
+        lerp(m.from[2], oz * 0.6, g),
+      );
+      moon.scale.setScalar(
+        Math.max(0.001, easeOut(clamp01(gather.current * 1.4))),
+      );
     });
   });
 
   return (
     <>
       <group ref={planet}>
-        <Blob seed={11} position={[0, 0, 0]} scale={1.1} color={palette.moss} amount={0.1} speed={0.5} />
+        <Blob
+          seed={11}
+          position={[0, 0, 0]}
+          scale={1.1}
+          color={palette.moss}
+          amount={0.1}
+          speed={0.5}
+        />
         <Orbit radius={1.85} tilt={[1.3, 0, 0.25]} speed={0.3} />
       </group>
-      <group ref={robot} position={[8, -1.5, 0.6]} rotation-y={-1.2} scale={0.5}>
-        <Robot drive={robotDrive} />
+      <group
+        ref={robot}
+        position={[8, -1.5, 0.6]}
+        rotation-y={-1.2}
+        scale={0.5}>
+        <group
+          ref={hop}
+          onClick={(e) => {
+            e.stopPropagation();
+            onPoke();
+          }}
+          onPointerOver={() => void (document.body.style.cursor = 'pointer')}
+          onPointerOut={() => void (document.body.style.cursor = '')}>
+          <Robot drive={robotDrive} />
+        </group>
       </group>
       {MOONS.map((m, i) => (
         <group key={m.seed} ref={(el) => void (moons.current[i] = el)}>
-          <Blob seed={m.seed} position={[0, 0, 0]} scale={m.size} color={m.color} amount={0.18} />
+          <Blob
+            seed={m.seed}
+            position={[0, 0, 0]}
+            scale={m.size}
+            color={m.color}
+            amount={0.18}
+          />
         </group>
       ))}
     </>
@@ -733,11 +864,78 @@ export function BuilderSpot({
   );
 }
 
+const ROBOT_LINES = [
+  'Beep boop. Hi!',
+  "I'm a robot, not a button.",
+  "Careful, I'm mostly chrome.",
+  "Hire Hanna and I'm included.",
+  'Psst: try the build-a-bot game up there.',
+  'Still here. Still waving.',
+];
+
 export function ClosingSpot({ className }: { className: string }) {
   const ref = useRef<HTMLDivElement>(null);
+  const bubble = useRef<HTMLDivElement>(null);
+  const poke = useRef<Poke>({ n: 0, kind: 'hop' });
+  const clicks = useRef(0);
+  const hide = useRef<number>(undefined);
+  const [line, setLine] = useState<string | null>(null);
+
+  useEffect(() => () => window.clearTimeout(hide.current), []);
+
+  const onPoke = () => {
+    const asleep = poke.current.kind === 'sleep';
+    clicks.current = asleep ? 0 : clicks.current + 1;
+    const n = clicks.current;
+    const kind: Poke['kind'] = asleep
+      ? 'wake'
+      : n === 10
+        ? 'sleep'
+        : n === 5
+          ? 'spin'
+          : 'hop';
+    poke.current = { n: poke.current.n + 1, kind };
+    let text: string;
+    if (kind === 'wake') text = "I'm up! I'm up!";
+    else if (kind === 'sleep') text = "That's it. Nap time. Zzz…";
+    else if (kind === 'spin') text = 'Okay, you found the easter egg 🥚';
+    else {
+      const options = ROBOT_LINES.filter((l) => l !== line);
+      text = options[Math.floor(Math.random() * options.length)];
+    }
+    setLine(text);
+    window.clearTimeout(hide.current);
+    // Asleep, the bubble stays up as a snore until the next click.
+    hide.current = window.setTimeout(
+      () => setLine(kind === 'sleep' ? 'Zzz…' : null),
+      2800,
+    );
+  };
+
   return (
-    <Spot className={className} camera={9} spotRef={ref}>
-      <ClosingScene spot={ref} />
-    </Spot>
+    // z-[35]: above the shared canvas (z-30) so the bubble isn't hidden behind the planet,
+    // below the fixed header (z-40). overflow-x-clip: before the robot walks in, the bubble's
+    // anchor sits off-screen right and would otherwise widen the page on phones.
+    <div className={`${className} z-[35] overflow-x-clip`}>
+      <Spot className='absolute inset-0' camera={9} spotRef={ref} interactive>
+        <ClosingScene
+          spot={ref}
+          pokeRef={poke}
+          onPoke={onPoke}
+          bubbleRef={bubble}
+        />
+      </Spot>
+      {/* Positioned each frame by the scene; the inner box sits up and to the left of the head. */}
+      <div
+        ref={bubble}
+        aria-hidden
+        className='pointer-events-none absolute left-0 top-0'>
+        {line && (
+          <div key={line} className='robot-bubble'>
+            {line}
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
