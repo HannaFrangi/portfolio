@@ -151,6 +151,12 @@ export const education = [
   { title: "BSc Computer Science", place: "Lebanese International University", period: "2021 to 2025" },
 ];
 
+/** What's on the go right now. Small and personal on purpose: update a line whenever it changes. */
+export const currently = [
+  { label: "Building", value: "The RoboStars React Native app and its dashboard, front and back end" },
+  { label: "Learning", value: "Working toward a Claude certification" },
+];
+
 /** Teaching credential, alongside the Cisco networking certificates below. */
 export const steam = "STEAM certified";
 

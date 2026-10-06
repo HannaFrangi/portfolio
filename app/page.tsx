@@ -14,6 +14,7 @@ import { ClosingSpot, DeviceSpot, FeaturedSpot, HeroSpot } from "@/components/th
 import {
   certificates,
   clients,
+  currently,
   education,
   experience,
   featured,
@@ -530,6 +531,15 @@ function About() {
               and programming at RoboStars, including kids with special needs. Currently studying for an MSc in Computer
               Science.
             </p>
+            <h3 className="mt-8 font-display text-base font-semibold tracking-wide text-paper">Currently</h3>
+            <dl className="mt-3 divide-y divide-paper/20 border-y border-paper/20">
+              {currently.map((c, i) => (
+                <div key={c.label} {...reveal(1 + i)} className="grid grid-cols-[5.5rem_1fr] gap-x-4 py-3">
+                  <dt className="text-sm text-paper/85">{c.label}</dt>
+                  <dd className="font-medium">{c.value}</dd>
+                </div>
+              ))}
+            </dl>
           </div>
           <div className="about-panel space-y-8">
             <div>
