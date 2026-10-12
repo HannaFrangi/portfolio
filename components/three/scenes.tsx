@@ -72,6 +72,10 @@ const tightenMatte = (shader: { fragmentShader: string }) => {
   );
 };
 
+/** Top of the head in the portrait's own space: the plane spans -3.75..0.75 and the
+ *  photo has ~9% of headroom above the hair. */
+const HEAD_TOP = 0.33;
+
 function Portrait() {
   const texture = useTexture("/textures/portrait.png", (t) => {
     (t as THREE.Texture).colorSpace = THREE.SRGBColorSpace;
@@ -110,10 +114,41 @@ function HeroScene() {
   const root = useRef<THREE.Group>(null);
   const pod = useRef<THREE.Group>(null);
   const size = useThree((s) => s.size);
+  // Highest the top of the head may sit (world y, before the root scale) without covering
+  // the "See my work" button. Short phone screens (Safari with its toolbars) need it.
+  const headCeiling = useRef<number | null>(null);
+
+  useEffect(() => {
+    const measure = () => {
+      const hero = document.getElementById("top");
+      const cta = hero?.querySelector<HTMLElement>('a[href="#work"]');
+      if (!hero || !cta) return;
+      // offsetTop, not getBoundingClientRect: the button rises in on load, and the
+      // transform would put it higher than where it comes to rest.
+      let bottom = cta.offsetHeight;
+      for (let el: HTMLElement | null = cta; el && el !== hero; el = el.offsetParent as HTMLElement | null) {
+        bottom += el.offsetTop;
+      }
+      const halfHeight = 9 * Math.tan(Math.PI / 12); // camera 9, fov 30, at the portrait's depth
+      headCeiling.current = halfHeight * (1 - (2 * (bottom + 16)) / hero.offsetHeight);
+    };
+    measure();
+    // Re-measure whenever the hero copy reflows: web fonts swapping in push the button down.
+    const copy = document.querySelector('#top a[href="#work"]')?.parentElement?.parentElement;
+    const observer = new ResizeObserver(measure);
+    if (copy) observer.observe(copy);
+    document.fonts?.ready.then(measure);
+    window.addEventListener("resize", measure);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, []);
 
   useFrame((state, delta) => {
     const dt = Math.min(delta, 1 / 30);
     const time = state.clock.elapsedTime;
+    const rootScale = Math.min(1, (size.width / size.height) * 0.9 + 0.2);
     // The hero leaves over one viewport of scroll.
     const out = motion.reduced ? 0 : clamp01(window.scrollY / window.innerHeight);
     const intro = motion.reduced ? 1 : easeOut(clamp01(state.clock.elapsedTime / 1.4));
@@ -123,13 +158,15 @@ function HeroScene() {
       [mid.current, 0.05, 0, 0],
       [front.current, 0.3, 2.2, 0.8],
     ];
-    // On phones the portrait sits lower so the photo's bottom edge falls below the fold.
-    const narrowDrop = size.width / size.height < 0.8 ? -0.75 : 0;
+    // On phones the portrait sits lower so the photo's bottom edge falls below the fold,
+    // and lower still if the head would otherwise cover the button.
+    let portraitY = size.width / size.height < 0.8 ? -0.75 : 0;
+    if (headCeiling.current !== null) portraitY = Math.min(portraitY, headCeiling.current / rootScale - HEAD_TOP);
     for (const [g, depth, lift, spread] of layers) {
       if (!g) continue;
       const px = motion.reduced ? 0 : pointer.sx * depth;
       const py = motion.reduced ? 0 : pointer.sy * depth * 0.6;
-      const base = g === mid.current ? narrowDrop : 0;
+      const base = g === mid.current ? portraitY : 0;
       g.position.x = damp(g.position.x, px, dt);
       g.position.y = damp(g.position.y, base + py + out * lift - (1 - intro) * lift * 0.4, dt, 8);
       const s = 1 + out * spread;
@@ -149,7 +186,7 @@ function HeroScene() {
     }
     // The blobs lean in toward the camera as the visitor leaves; the portrait holds its
     // size so its faded bottom never crosses the edge of the hero's 3D box.
-    if (root.current) root.current.scale.setScalar(Math.min(1, (size.width / size.height) * 0.9 + 0.2));
+    if (root.current) root.current.scale.setScalar(rootScale);
     for (const g of [back.current, front.current]) if (g) g.position.z = damp(g.position.z, out * 1.6, dt, 8);
   });
 

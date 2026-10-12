@@ -565,3 +565,45 @@ html[data-portrait="3d"] .portrait-fallback {
     display: none;
   }
 }
+
+/* =====================================================================
+   Touch devices: smooth scrolling first.
+   Measured on a 4x-throttled phone profile, backdrop blur alone cost ~12fps
+   while scrolling (Safari re-blurs every frame as content moves behind it),
+   and the two endless background animations kept the layers under it repainting.
+   The 3D canvas sits above the page, so these blurs never touched the 3D anyway;
+   surfaces that carry text over busy imagery get a more solid fill instead.
+   ===================================================================== */
+@media (pointer: coarse) {
+  *,
+  *::before,
+  *::after {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  .plate-drift,
+  .light-sweep {
+    animation: none;
+  }
+  /* The light sweep is a moving band; parked, it would just be a stripe. */
+  .light-sweep {
+    opacity: 0;
+  }
+  /* Nav: text scrolls underneath it. */
+  header nav.pill-soft {
+    background: rgb(245 242 234 / 0.9);
+  }
+  [data-theme="dark"] header nav.pill-soft {
+    background: rgb(31 36 25 / 0.92);
+  }
+  /* Its own blur rule is a class selector, which outranks the reset above. */
+  .about-panel {
+    background: rgb(50 56 32 / 0.88);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  /* The hero status label over the landscape. */
+  #top p.bg-surface\/55 {
+    background: color-mix(in oklab, var(--surface) 82%, transparent);
+  }
+}
