@@ -1,23 +1,25 @@
 @import "tailwindcss";
 
 :root {
-  /* Space-age studio: sage and cream daylight, olive ink, one burnt-orange signal. */
-  --mist: #dbdfd9;
-  --cream: #ede8dc;
-  --paper: #f5f2ea;
-  --sand: #c2b396;
-  --sand-2: #b4ab91;
-  --moss: #5d7343; /* 3.9:1 on mist: large type only; small text uses olive */
-  --sage: #959d69;
-  --olive: #50563a;
-  --ink: #13180a;
-  --ink-soft: #55524a;
-  --accent: #e0703a;
-  /* Keyboard focus ring: olive is ~6:1 on mist (orange is only ~2.4:1, under WCAG's 3:1). */
-  --focus: var(--olive);
-  /* Surfaces vs. on-dark text: --paper is always the light text on olive/dark panels. */
-  --surface: #f5f2ea;
-  --hairline: rgb(255 255 255 / 0.8);
+  /* Neo-Y2K sky: pale aqua and lilac daylight, navy ink, cobalt type, glossy gel buttons.
+     Token names are kept from the first theme (moss = big display colour, olive = small
+     text and links, sage = soft decor, sand = hairlines) so the markup didn't change. */
+  --mist: #e8f1fb;
+  --cream: #efecff;
+  --paper: #ffffff;
+  --sand: #b9c8e8;
+  --sand-2: #a7b6da;
+  --moss: #2f48e0; /* ~6:1 on mist */
+  --sage: #7fd6e6;
+  --olive: #22307a; /* small text and links: ~10:1 on mist */
+  --ink: #0b1433;
+  --ink-soft: #45506e;
+  --accent: #6a4dff;
+  --lime: #c8f53a;
+  --focus: var(--moss);
+  /* Surfaces vs. on-dark text: --paper is always the light text on navy panels. */
+  --surface: #ffffff;
+  --hairline: rgb(255 255 255 / 0.9);
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   color-scheme: light;
 }
@@ -33,12 +35,13 @@
   --color-ink: var(--ink);
   --color-ink-soft: var(--ink-soft);
   --color-accent: var(--accent);
+  --color-lime: var(--lime);
   --color-surface: var(--surface);
   --color-hairline: var(--hairline);
   --font-sans: var(--font-geist-sans), system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
   --font-serif: var(--font-instrument), Georgia, serif;
-  --font-display: var(--font-syne), var(--font-geist-sans), system-ui, sans-serif;
+  --font-display: var(--font-lexend-exa), var(--font-geist-sans), system-ui, sans-serif;
 }
 
 html {
@@ -50,29 +53,30 @@ body {
   color: var(--ink);
   font-family: var(--font-sans);
   background:
-    radial-gradient(60vw 50vh at 85% 8%, rgb(149 157 105 / 0.2), transparent 70%),
-    radial-gradient(50vw 40vh at 5% 30%, rgb(194 179 150 / 0.35), transparent 70%),
+    radial-gradient(60vw 50vh at 85% 8%, rgb(185 166 255 / 0.32), transparent 70%),
+    radial-gradient(50vw 40vh at 5% 30%, rgb(92 225 230 / 0.26), transparent 70%),
+    radial-gradient(50vw 40vh at 90% 70%, rgb(92 225 230 / 0.18), transparent 70%),
     linear-gradient(180deg, var(--mist) 0%, var(--cream) 45%, var(--mist) 100%);
 }
 
-/* A whisper of film grain: the only overtly retro texture on the page. */
+/* The faintest grain, so the big gradients never band. */
 body::after {
   content: "";
   position: fixed;
   inset: 0;
   z-index: 50;
   pointer-events: none;
-  opacity: 0.06;
+  opacity: 0.035;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
 ::selection {
-  background: var(--moss);
-  color: var(--paper);
+  background: var(--accent);
+  color: #fff;
 }
 
 html {
-  scrollbar-color: color-mix(in oklab, var(--sage) 70%, transparent) transparent;
+  scrollbar-color: color-mix(in oklab, var(--moss) 45%, transparent) transparent;
   accent-color: var(--moss);
   caret-color: var(--accent);
 }
@@ -84,17 +88,19 @@ html {
 
 /* Components live in a layer so Tailwind utilities (md:hidden, !py-1.5, ...) can override them. */
 @layer components {
-  /* Soft clay card, lit from above like the 3D pieces. */
+  /* Frosted glass card with a wet top edge, like the bubbles in the 3D. */
   .clay {
-    background: linear-gradient(180deg, rgb(255 255 255 / 0.62), rgb(245 242 234 / 0.5));
-    border: 1px solid rgb(255 255 255 / 0.7);
+    background:
+      linear-gradient(180deg, rgb(255 255 255 / 0.55), rgb(255 255 255 / 0) 22%),
+      linear-gradient(180deg, rgb(255 255 255 / 0.62), rgb(240 246 255 / 0.42));
+    border: 1px solid rgb(255 255 255 / 0.9);
     border-radius: 28px;
     box-shadow:
-      inset 0 1px 0 rgb(255 255 255 / 0.9),
-      inset 0 -8px 20px -12px rgb(89 95 62 / 0.18),
-      0 24px 48px -28px rgb(89 95 62 / 0.45),
-      0 2px 6px -2px rgb(89 95 62 / 0.15);
-    backdrop-filter: blur(14px);
+      inset 0 1px 0 #fff,
+      inset 0 -12px 28px -16px rgb(92 225 230 / 0.45),
+      0 24px 48px -28px rgb(34 48 122 / 0.45),
+      0 2px 6px -2px rgb(34 48 122 / 0.15);
+    backdrop-filter: blur(16px) saturate(1.4);
   }
 
   .pill {
@@ -107,23 +113,36 @@ html {
     font-weight: 500;
     transition:
       transform 0.4s var(--ease-out),
-      box-shadow 0.4s var(--ease-out);
+      box-shadow 0.4s var(--ease-out),
+      filter 0.4s var(--ease-out);
   }
   .pill:hover {
     transform: translateY(-2px);
   }
+  /* The gel button: a glossy top half over a deep cobalt body, like an early-2000s OS. */
   .pill-solid {
-    background: linear-gradient(180deg, #5c7244, #4f6238);
-    color: var(--paper);
+    background:
+      linear-gradient(180deg, rgb(255 255 255 / 0.55) 0%, rgb(255 255 255 / 0.14) 48%, transparent 50%),
+      linear-gradient(180deg, #4d6bff, #2a44d6);
+    color: #fff;
+    border: 1px solid rgb(28 44 170 / 0.5);
     box-shadow:
-      inset 0 1px 0 rgb(255 255 255 / 0.35),
-      0 10px 24px -10px rgb(89 95 62 / 0.7);
+      inset 0 1px 0 rgb(255 255 255 / 0.7),
+      inset 0 -4px 10px rgb(120 220 255 / 0.45),
+      0 10px 24px -10px rgb(59 91 255 / 0.75);
+    text-shadow: 0 1px 1px rgb(10 20 90 / 0.35);
+  }
+  .pill-solid:hover {
+    filter: brightness(1.08) saturate(1.1);
   }
   .pill-soft {
-    background: rgb(255 255 255 / 0.6);
-    border: 1px solid rgb(255 255 255 / 0.8);
-    box-shadow: 0 6px 18px -10px rgb(89 95 62 / 0.45);
-    backdrop-filter: blur(10px);
+    background:
+      linear-gradient(180deg, rgb(255 255 255 / 0.7), rgb(255 255 255 / 0.25) 50%, rgb(255 255 255 / 0.45));
+    border: 1px solid rgb(255 255 255 / 0.95);
+    box-shadow:
+      inset 0 1px 0 #fff,
+      0 6px 18px -10px rgb(34 48 122 / 0.45);
+    backdrop-filter: blur(10px) saturate(1.3);
   }
 
   /* Secondary links: olive text (4.97:1 on mist), sage underline, drawn arrow. */
@@ -134,7 +153,7 @@ html {
     font-weight: 500;
     color: var(--olive);
     text-decoration: underline;
-    text-decoration-color: color-mix(in oklab, var(--sage) 70%, transparent);
+    text-decoration-color: color-mix(in oklab, var(--accent) 45%, transparent);
     text-underline-offset: 4px;
     transition: color 0.3s var(--ease-out), text-decoration-color 0.3s var(--ease-out);
   }
@@ -148,9 +167,9 @@ html {
     border-radius: 999px;
     padding: 0.3rem 0.75rem;
     font-size: 0.78rem;
-    background: rgb(149 157 105 / 0.16);
-    color: #474c30;
-    border: 1px solid rgb(149 157 105 / 0.28);
+    background: linear-gradient(180deg, rgb(255 255 255 / 0.7), rgb(92 225 230 / 0.16));
+    color: #1d2f6e;
+    border: 1px solid rgb(92 225 230 / 0.45);
   }
 
 }
@@ -190,8 +209,11 @@ html {
 }
 .step-icon {
   color: color-mix(in oklab, var(--olive) calc((1 - var(--on, 1)) * 100%), var(--accent));
-  background: rgb(255 255 255 / 0.6);
-  box-shadow: inset 0 1px 0 #fff, 0 10px 24px -14px rgb(89 95 62 / 0.55);
+  background:
+    radial-gradient(circle at 35% 28%, #fff 0 18%, transparent 45%),
+    linear-gradient(180deg, rgb(255 255 255 / 0.85), rgb(185 166 255 / 0.25));
+  border: 1px solid rgb(255 255 255 / 0.9);
+  box-shadow: inset 0 -6px 12px -6px rgb(92 225 230 / 0.6), 0 10px 24px -14px rgb(34 48 122 / 0.55);
 }
 
 /* Pinned sections: a slim tick showing how much of the sequence is left. */
@@ -203,7 +225,7 @@ html {
   height: 3px;
   translate: -50% 0;
   border-radius: 999px;
-  background: rgb(149 157 105 / 0.3);
+  background: rgb(47 72 224 / 0.15);
   overflow: hidden;
   /* only while the sequence is running: gone before it starts and once it is done */
   opacity: clamp(0, min(var(--p, 0) * 25, (1 - var(--p, 0)) * 25), 1);
@@ -265,12 +287,13 @@ html[data-portrait="3d"] .portrait-fallback {
     scale(calc(1.02 + var(--p, 0.5) * 0.1));
 }
 
-/* Scrim only where copy sits: frosted olive panels over the paper. */
+/* Scrim only where copy sits: frosted navy glass over the water. */
 .about-panel {
   border-radius: 24px;
   padding: 1.75rem;
-  background: rgb(50 56 32 / 0.74);
-  backdrop-filter: blur(14px) saturate(1.1);
+  background: linear-gradient(180deg, rgb(255 255 255 / 0.1), rgb(255 255 255 / 0) 30%), rgb(11 20 51 / 0.66);
+  border: 1px solid rgb(255 255 255 / 0.18);
+  backdrop-filter: blur(14px) saturate(1.2);
 }
 @media (min-width: 768px) {
   .about-panel { padding: 2.25rem; }
@@ -306,7 +329,7 @@ html[data-portrait="3d"] .portrait-fallback {
 
   /* Window light slides across the paper-cut hills. */
   .light-sweep {
-    background: linear-gradient(105deg, transparent 30%, rgb(255 236 200 / 0.28) 45%, transparent 60%);
+    background: linear-gradient(105deg, transparent 30%, rgb(255 255 255 / 0.3) 45%, transparent 60%);
     mix-blend-mode: soft-light;
     animation: sweep 9s ease-in-out infinite;
   }
@@ -375,95 +398,107 @@ html[data-portrait="3d"] .portrait-fallback {
 }
 
 /* =====================================================================
-   Night shift: the same studio after dark. Olive-black room, cream type,
-   the burnt-orange signal becomes the lamp. Screens are the brightest thing.
+   Night shift: the same sky after dark. Navy room, ice-white type,
+   aqua and lilac light strips. Screens are the brightest thing.
    ===================================================================== */
 
 [data-theme="dark"] {
-  --mist: #12150e;
-  --cream: #191d14;
-  --surface: #1f2419;
-  --hairline: rgb(237 232 220 / 0.1);
-  --sand: #4a4838;
-  --sand-2: #5a5744;
-  --moss: #b3c486; /* big type on the dark room */
-  --sage: #7f8b58;
-  --olive: #cdd4a6; /* small text and links: ~11:1 on mist */
-  --ink: #ede8dc;
-  --ink-soft: #b5af9f;
-  --accent: #f08a50;
-  /* At night the orange lamp is the brightest thing on the page, so it can carry focus. */
-  --focus: var(--accent);
+  --mist: #070b1e;
+  --cream: #0c1230;
+  --surface: #111a3d;
+  --hairline: rgb(200 215 255 / 0.12);
+  --sand: #2a3566;
+  --sand-2: #36437a;
+  --moss: #7fe8f0; /* big type: aqua on the night sky */
+  --sage: #3c7fa0;
+  --olive: #c4d2ff; /* small text and links: ~12:1 on mist */
+  --ink: #eaf0ff;
+  --ink-soft: #a3afd3;
+  --accent: #b49cff;
+  --lime: #d4ff4a;
+  --focus: var(--moss);
   color-scheme: dark;
 }
 
 [data-theme="dark"] body {
   background:
-    radial-gradient(55vw 45vh at 85% 6%, rgb(240 138 80 / 0.1), transparent 70%),
-    radial-gradient(50vw 40vh at 5% 30%, rgb(127 139 88 / 0.14), transparent 70%),
+    radial-gradient(55vw 45vh at 85% 6%, rgb(180 156 255 / 0.16), transparent 70%),
+    radial-gradient(50vw 40vh at 5% 30%, rgb(92 225 230 / 0.12), transparent 70%),
     linear-gradient(180deg, var(--mist) 0%, var(--cream) 45%, var(--mist) 100%);
 }
 [data-theme="dark"] body::after {
-  opacity: 0.09;
+  opacity: 0.05;
 }
 
-/* Generated plates, re-lit for night instead of regenerated. */
-[data-theme="dark"] .plate-drift img {
-  filter: brightness(0.38) saturate(0.75) contrast(1.08);
+/* Generated skies: one plate per theme, so night is a real night rather than a dimmed day. */
+.sky-dark,
+[data-theme="dark"] .sky-light {
+  display: none;
+}
+[data-theme="dark"] .sky-dark {
+  display: block;
 }
 [data-theme="dark"] .portrait-fallback img {
-  filter: brightness(0.85) sepia(0.15);
-}
-[data-theme="dark"] .paper img {
-  filter: brightness(0.5) saturate(0.8);
+  filter: brightness(0.88);
 }
 [data-theme="dark"] .light-sweep {
-  background: linear-gradient(105deg, transparent 30%, rgb(255 170 110 / 0.22) 45%, transparent 60%);
+  background: linear-gradient(105deg, transparent 30%, rgb(127 232 240 / 0.18) 45%, transparent 60%);
 }
 
 @layer components {
   [data-theme="dark"] .clay {
-    background: linear-gradient(180deg, rgb(44 50 36 / 0.72), rgb(28 32 23 / 0.62));
-    border-color: rgb(237 232 220 / 0.08);
+    background:
+      linear-gradient(180deg, rgb(255 255 255 / 0.08), rgb(255 255 255 / 0) 22%),
+      linear-gradient(180deg, rgb(28 38 84 / 0.72), rgb(14 20 50 / 0.62));
+    border-color: rgb(200 215 255 / 0.14);
     box-shadow:
-      inset 0 1px 0 rgb(237 232 220 / 0.08),
+      inset 0 1px 0 rgb(255 255 255 / 0.12),
+      inset 0 -12px 28px -16px rgb(92 225 230 / 0.25),
       0 24px 48px -28px rgb(0 0 0 / 0.7),
       0 2px 6px -2px rgb(0 0 0 / 0.4);
   }
   [data-theme="dark"] .pill-soft {
-    background: rgb(31 36 25 / 0.7);
-    border-color: rgb(237 232 220 / 0.1);
-    box-shadow: 0 6px 18px -10px rgb(0 0 0 / 0.6);
+    background: linear-gradient(180deg, rgb(255 255 255 / 0.1), rgb(17 26 61 / 0.7) 50%);
+    border-color: rgb(200 215 255 / 0.16);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.12), 0 6px 18px -10px rgb(0 0 0 / 0.6);
   }
-  /* The lamp: the one warm, lit button. Dark ink on orange (~6.9:1). */
+  /* At night the gel button turns aqua and lights the room. Navy ink on aqua (~11:1). */
   [data-theme="dark"] .pill-solid {
-    background: linear-gradient(180deg, #f39a62, #e07a42);
-    color: #16190f;
+    background:
+      linear-gradient(180deg, rgb(255 255 255 / 0.6) 0%, rgb(255 255 255 / 0.16) 48%, transparent 50%),
+      linear-gradient(180deg, #8ff3f6, #33c4cc);
+    color: #06122e;
+    border-color: rgb(127 232 240 / 0.6);
+    text-shadow: 0 1px 0 rgb(255 255 255 / 0.4);
     box-shadow:
-      inset 0 1px 0 rgb(255 255 255 / 0.35),
-      0 10px 28px -10px rgb(240 138 80 / 0.55);
+      inset 0 1px 0 rgb(255 255 255 / 0.8),
+      inset 0 -4px 10px rgb(255 255 255 / 0.3),
+      0 10px 28px -10px rgb(92 225 230 / 0.6);
   }
   [data-theme="dark"] .chip {
-    background: rgb(127 139 88 / 0.16);
-    color: #d4d9b0;
-    border-color: rgb(127 139 88 / 0.32);
+    background: linear-gradient(180deg, rgb(255 255 255 / 0.06), rgb(92 225 230 / 0.12));
+    color: #c6f7f9;
+    border-color: rgb(92 225 230 / 0.3);
   }
 }
 
 [data-theme="dark"] .step-icon {
-  background: rgb(31 36 25 / 0.8);
-  box-shadow: inset 0 1px 0 rgb(237 232 220 / 0.08), 0 10px 24px -14px rgb(0 0 0 / 0.7);
+  background:
+    radial-gradient(circle at 35% 28%, rgb(255 255 255 / 0.5) 0 14%, transparent 42%),
+    linear-gradient(180deg, rgb(40 55 120 / 0.9), rgb(17 26 61 / 0.9));
+  border-color: rgb(200 215 255 / 0.15);
+  box-shadow: inset 0 -6px 12px -6px rgb(92 225 230 / 0.4), 0 10px 24px -14px rgb(0 0 0 / 0.7);
 }
 [data-theme="dark"] .skip-link {
-  background: var(--accent);
-  color: #16190f;
+  background: var(--moss);
+  color: #06122e;
 }
 [data-theme="dark"] .about-panel {
-  background: rgb(18 21 14 / 0.72);
+  background: linear-gradient(180deg, rgb(255 255 255 / 0.07), rgb(255 255 255 / 0) 30%), rgb(5 8 22 / 0.7);
 }
 [data-theme="dark"] ::selection {
   background: var(--accent);
-  color: #16190f;
+  color: #06122e;
 }
 
 /* Theme switch: sun by day, moon at night, crossfading with a small turn. */
@@ -502,7 +537,7 @@ html[data-portrait="3d"] .portrait-fallback {
   font-size: 0.875rem;
   font-weight: 700;
   line-height: 1.3;
-  box-shadow: 0 12px 28px -14px rgb(19 24 10 / 0.5);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.6), 0 12px 28px -14px rgb(11 20 51 / 0.5);
   border: 1px solid var(--hairline);
 }
 
@@ -524,14 +559,14 @@ html[data-portrait="3d"] .portrait-fallback {
 /* Between midnight and 4am (visitor's clock), the night sky gets stars. */
 [data-theme="dark"][data-midnight] body {
   background:
-    radial-gradient(1px 1px at 23px 41px, rgb(237 232 220 / 0.7), transparent),
-    radial-gradient(1px 1px at 131px 97px, rgb(237 232 220 / 0.5), transparent),
-    radial-gradient(1.5px 1.5px at 197px 23px, rgb(240 138 80 / 0.7), transparent),
-    radial-gradient(1px 1px at 61px 173px, rgb(237 232 220 / 0.6), transparent),
-    radial-gradient(1.5px 1.5px at 163px 211px, rgb(237 232 220 / 0.8), transparent),
-    radial-gradient(1px 1px at 241px 149px, rgb(237 232 220 / 0.4), transparent),
-    radial-gradient(55vw 45vh at 85% 6%, rgb(240 138 80 / 0.1), transparent 70%),
-    radial-gradient(50vw 40vh at 5% 30%, rgb(127 139 88 / 0.14), transparent 70%),
+    radial-gradient(1px 1px at 23px 41px, rgb(234 240 255 / 0.7), transparent),
+    radial-gradient(1px 1px at 131px 97px, rgb(234 240 255 / 0.5), transparent),
+    radial-gradient(1.5px 1.5px at 197px 23px, rgb(127 232 240 / 0.8), transparent),
+    radial-gradient(1px 1px at 61px 173px, rgb(234 240 255 / 0.6), transparent),
+    radial-gradient(1.5px 1.5px at 163px 211px, rgb(234 240 255 / 0.8), transparent),
+    radial-gradient(1px 1px at 241px 149px, rgb(234 240 255 / 0.4), transparent),
+    radial-gradient(55vw 45vh at 85% 6%, rgb(180 156 255 / 0.16), transparent 70%),
+    radial-gradient(50vw 40vh at 5% 30%, rgb(92 225 230 / 0.12), transparent 70%),
     linear-gradient(180deg, var(--mist) 0%, var(--cream) 45%, var(--mist) 100%);
   /* Different tile sizes so the pattern never reads as a grid. */
   background-size: 260px 260px, 330px 330px, 370px 370px, 290px 290px, 410px 410px, 250px 250px, auto, auto, auto;
@@ -591,14 +626,14 @@ html[data-portrait="3d"] .portrait-fallback {
   }
   /* Nav: text scrolls underneath it. */
   header nav.pill-soft {
-    background: rgb(245 242 234 / 0.9);
+    background: rgb(255 255 255 / 0.9);
   }
   [data-theme="dark"] header nav.pill-soft {
-    background: rgb(31 36 25 / 0.92);
+    background: rgb(17 26 61 / 0.92);
   }
   /* Its own blur rule is a class selector, which outranks the reset above. */
   .about-panel {
-    background: rgb(50 56 32 / 0.88);
+    background: rgb(11 20 51 / 0.86);
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
   }

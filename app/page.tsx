@@ -26,8 +26,10 @@ import {
   works,
 } from "@/lib/content";
 import { siteUrl } from "@/lib/site";
-import aboutPaper from "./media/about-paper.jpg";
-import heroPlate from "./media/hero-plate.jpg";
+import aboutWaterDark from "./media/about-water-dark.jpg";
+import aboutWaterLight from "./media/about-water-light.jpg";
+import heroSkyDark from "./media/hero-sky-dark.jpg";
+import heroSkyLight from "./media/hero-sky-light.jpg";
 import portrait from "../public/textures/portrait.png";
 
 /** One sentence the whole page should leave behind. */
@@ -162,19 +164,24 @@ function Hero() {
       data-progress='leave'
       aria-labelledby='hero-title'
       className='relative isolate h-[100svh] min-h-160 overflow-hidden'>
-      {/* Far plane: generated space-age landscape. It sits under the headline, which sits
-          under the WebGL portrait and blobs: landscape, type, subject, foreground. */}
+      {/* Far plane: a generated frutiger sky, one per theme. It sits under the headline, which
+          sits under the WebGL portrait, chrome and bubbles: sky, type, subject, foreground. */}
       <div aria-hidden className='plate absolute inset-0 -z-10'>
         <div className='plate-drift absolute inset-[-6%]'>
-          <Image
-            src={heroPlate}
-            alt=''
-            fill
-            preload
-            placeholder='blur'
-            sizes='100vw'
-            className='object-cover object-[50%_62%]'
-          />
+          <div className='sky-light absolute inset-0'>
+            <Image
+              src={heroSkyLight}
+              alt=''
+              fill
+              preload
+              placeholder='blur'
+              sizes='100vw'
+              className='object-cover object-[50%_62%]'
+            />
+          </div>
+          <div className='sky-dark absolute inset-0'>
+            <Image src={heroSkyDark} alt='' fill placeholder='blur' sizes='100vw' className='object-cover object-[50%_62%]' />
+          </div>
         </div>
       </div>
       {/* Outside the moving plate, so the hero always melts into the page below. */}
@@ -504,14 +511,19 @@ function Process() {
 }
 
 /**
- * Generated paper-cut landscape. As the section passes, the camera drifts across it
- * (scroll-driven zoom and pan) and a band of window light slides over the paper.
+ * Generated underwater light, one per theme. As the section passes, the camera drifts
+ * across it (scroll-driven zoom and pan) and a band of light slides over the water.
  */
 function PaperBackdrop() {
   return (
     <div aria-hidden className="absolute inset-0 overflow-hidden">
       <div className="paper absolute inset-[-8%]">
-        <Image src={aboutPaper} alt="" fill placeholder="blur" sizes="(min-width: 1152px) 1152px, 100vw" className="object-cover" />
+        <div className="sky-light absolute inset-0">
+          <Image src={aboutWaterLight} alt="" fill placeholder="blur" sizes="(min-width: 1152px) 1152px, 100vw" className="object-cover" />
+        </div>
+        <div className="sky-dark absolute inset-0">
+          <Image src={aboutWaterDark} alt="" fill placeholder="blur" sizes="(min-width: 1152px) 1152px, 100vw" className="object-cover" />
+        </div>
       </div>
       <div className="light-sweep absolute inset-0" />
     </div>
@@ -529,10 +541,10 @@ function About() {
     >
       <div
         {...reveal(0)}
-        className="relative mx-auto max-w-6xl overflow-hidden rounded-[40px] text-paper shadow-[0_40px_80px_-40px_rgb(89_95_62/0.8)]"
+        className="relative mx-auto max-w-6xl overflow-hidden rounded-[40px] text-paper shadow-[0_40px_80px_-40px_rgb(34_48_122/0.8)]"
       >
         <PaperBackdrop />
-        {/* Olive scrims behind the copy only: the paper stays visible around them. */}
+        {/* Navy glass behind the copy only: the water stays visible around them. */}
         <div className="relative grid gap-6 p-5 md:gap-8 md:p-12 lg:grid-cols-2">
           <div className="about-panel self-start">
             <h2 id="about-title" className="font-display text-[clamp(2.2rem,4.6vw,3.6rem)] font-bold leading-[1.02] tracking-[-0.03em]">

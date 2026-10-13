@@ -15,13 +15,10 @@ const serif = localFont({
   variable: "--font-instrument",
 });
 
+// Wide geometric display face for the neo-Y2K look (variable, 500-800).
 const display = localFont({
-  src: [
-    { path: "./fonts/Syne-500.woff2", weight: "500" },
-    { path: "./fonts/Syne-700.woff2", weight: "700" },
-    { path: "./fonts/Syne-800.woff2", weight: "800" },
-  ],
-  variable: "--font-syne",
+  src: [{ path: "./fonts/LexendExa-latin.woff2", weight: "500 800" }],
+  variable: "--font-lexend-exa",
 });
 
 const geistSans = Geist({
@@ -56,8 +53,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#dbdfd9" },
-    { media: "(prefers-color-scheme: dark)", color: "#12150e" },
+    { media: "(prefers-color-scheme: light)", color: "#e8f1fb" },
+    { media: "(prefers-color-scheme: dark)", color: "#070b1e" },
   ],
   colorScheme: "light dark",
 };
