@@ -164,7 +164,7 @@ function Hero() {
       data-progress='leave'
       aria-labelledby='hero-title'
       className='relative isolate h-[100svh] min-h-160 overflow-hidden'>
-      {/* Far plane: a generated frutiger sky, one per theme. It sits under the headline, which
+      {/* Far plane: a generated frutiger meadow, one per theme. It sits under the headline, which
           sits under the WebGL portrait, chrome and bubbles: sky, type, subject, foreground. */}
       <div aria-hidden className='plate absolute inset-0 -z-10'>
         <div className='plate-drift absolute inset-[-6%]'>
@@ -541,10 +541,10 @@ function About() {
     >
       <div
         {...reveal(0)}
-        className="relative mx-auto max-w-6xl overflow-hidden rounded-[40px] text-paper shadow-[0_40px_80px_-40px_rgb(34_48_122/0.8)]"
+        className="relative mx-auto max-w-6xl overflow-hidden rounded-[40px] text-paper shadow-[0_40px_80px_-40px_rgb(22_64_34/0.8)]"
       >
         <PaperBackdrop />
-        {/* Navy glass behind the copy only: the water stays visible around them. */}
+        {/* Forest glass behind the copy only: the water stays visible around them. */}
         <div className="relative grid gap-6 p-5 md:gap-8 md:p-12 lg:grid-cols-2">
           <div className="about-panel self-start">
             <h2 id="about-title" className="font-display text-[clamp(2.2rem,4.6vw,3.6rem)] font-bold leading-[1.02] tracking-[-0.03em]">

@@ -6,15 +6,15 @@ import { useThree } from "@react-three/fiber";
 import { useQuality } from "@/lib/quality";
 import { useTheme } from "@/lib/theme";
 
-/** Neo-Y2K palette, shared with globals.css: liquid chrome, aqua and lilac glass, one lime spark. */
+/** Green frutiger palette, shared with globals.css: liquid chrome, mint and aqua glass, one lime spark. */
 export const palette = {
   aqua: '#5CE1E6',
-  lilac: '#B9A6FF',
+  mint: '#7EE8A8',
+  leaf: '#3FB950',
   pearl: '#F4F6FF',
   sky: '#CFE6FF',
-  cobalt: '#3B5BFF',
+  forest: '#1C4424',
   lime: '#C8F53A',
-  navy: '#0B1433',
   chrome: '#eef2f8',
 };
 
@@ -362,7 +362,7 @@ export function makeLiquidChrome(low: boolean, tint = palette.chrome) {
 
 /**
  * The fallback room chrome reflects until the generated sky panorama arrives (and if it
- * never does): soft aqua and lilac light panels. Built once per theme, shared by every view.
+ * never does): soft mint and aqua light panels. Built once per theme, shared by every view.
  */
 const envCache = new Map<string, THREE.Texture>();
 function proceduralEnvironment(gl: THREE.WebGLRenderer, dark: boolean) {
@@ -370,7 +370,7 @@ function proceduralEnvironment(gl: THREE.WebGLRenderer, dark: boolean) {
   const hit = envCache.get(key);
   if (hit) return hit;
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(dark ? '#070b1e' : '#e8f1fb');
+  scene.background = new THREE.Color(dark ? '#05130a' : '#eaf6ea');
   const panel = (
     color: string,
     intensity: number,
@@ -391,9 +391,9 @@ function proceduralEnvironment(gl: THREE.WebGLRenderer, dark: boolean) {
     scene.add(mesh);
   };
   panel('#ffffff', dark ? 0.9 : 3, [0, 4, 3], [10, 3]);
-  panel(dark ? '#5ce1e6' : '#bdf3f5', dark ? 1.6 : 1.6, [-5, 0, 2], [6, 3]);
-  panel(dark ? '#b9a6ff' : '#ddd3ff', dark ? 1.8 : 1.5, [5, -1, 2], [6, 2]);
-  panel(dark ? '#1a2350' : '#ffffff', 1, [0, -4, 1], [10, 3]);
+  panel(dark ? '#5ce1e6' : '#c8f5d6', dark ? 1.6 : 1.6, [-5, 0, 2], [6, 3]);
+  panel(dark ? '#c8f53a' : '#e6f9c0', dark ? 1.8 : 1.5, [5, -1, 2], [6, 2]);
+  panel(dark ? '#163a24' : '#ffffff', 1, [0, -4, 1], [10, 3]);
   const pmrem = new THREE.PMREMGenerator(gl);
   const texture = pmrem.fromScene(scene, 0.02).texture;
   pmrem.dispose();
@@ -422,8 +422,8 @@ function skyEnvironment(gl: THREE.WebGLRenderer, dark: boolean) {
 }
 
 /**
- * Daylight sky studio: cool key, lilac bounce, and the sky panorama in every reflection.
- * Night shift turns the room navy with cyan and lilac light strips.
+ * Daylight sky studio: cool key, mint bounce, and the sky panorama in every reflection.
+ * Night shift turns the room deep green with mint and lime light strips.
  */
 export function Studio() {
   const dark = useTheme() === "dark";
@@ -446,17 +446,17 @@ export function Studio() {
   return (
     <>
       <hemisphereLight
-        args={dark ? ['#4a5aa8', '#05060f', 0.7] : ['#f2fbff', '#c9bcff', 1.1]}
+        args={dark ? ['#3f7a5a', '#040c06', 0.7] : ['#f4fff4', '#cfeec0', 1.1]}
       />
       <directionalLight
         position={[4, 6, 5]}
         intensity={dark ? 1.4 : 2.1}
-        color={dark ? '#cdeeff' : '#ffffff'}
+        color={dark ? '#d8ffe6' : '#ffffff'}
       />
       <directionalLight
         position={[-5, 2, -3]}
         intensity={dark ? 2.2 : 0.9}
-        color={dark ? '#b49cff' : '#bdf3f5'}
+        color={dark ? '#7ee8a8' : '#c8f5d6'}
       />
       {/* shared across views, so never disposed when one view unmounts */}
       <primitive object={environment} attach='environment' dispose={null} />

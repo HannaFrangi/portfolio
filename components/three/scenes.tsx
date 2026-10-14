@@ -96,7 +96,7 @@ function Portrait() {
           the empty pixels around the cut-out so they never hide the orbit ring. */}
       <meshBasicMaterial
         map={texture}
-        color={dark ? "#cdd6f2" : "#ffffff"}
+        color={dark ? "#d0e8d6" : "#ffffff"}
         alphaMap={portraitFade}
         transparent
         alphaTest={0.02}
@@ -421,7 +421,7 @@ function DeviceScene({ project, spot }: { project: Project; spot: RefObject<HTML
 const MOONS = [
   { finish: "glass", color: undefined, size: 0.26, from: [-6, 3, -2] },
   { finish: "chrome", color: undefined, size: 0.14, from: [6, 2.5, 1] },
-  { finish: "jelly", color: palette.lilac, size: 0.16, from: [-5, -3, 2] },
+  { finish: "jelly", color: palette.mint, size: 0.16, from: [-5, -3, 2] },
   { finish: "glass", color: undefined, size: 0.2, from: [5.5, -2.5, -1] },
   { finish: "plastic", color: palette.lime, size: 0.1, from: [0, 4.5, 0] },
   { finish: "jelly", color: palette.aqua, size: 0.15, from: [-6.5, 0, 1] },
@@ -868,7 +868,7 @@ function BuilderScene({
       </group>
       <mesh ref={snapRing} visible={false}>
         <torusGeometry args={[0.5, 0.025, 12, 64]} />
-        <meshBasicMaterial color={palette.aqua} transparent opacity={0} toneMapped={false} depthWrite={false} />
+        <meshBasicMaterial color={palette.mint} transparent opacity={0} toneMapped={false} depthWrite={false} />
       </mesh>
       <mesh ref={wave} visible={false} position={[0, ROBOT_HOME[1][1], 0.3]}>
         <torusGeometry args={[0.5, 0.03, 12, 96]} />

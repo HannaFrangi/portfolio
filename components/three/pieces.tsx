@@ -528,7 +528,7 @@ function useRobotMaterials(ghost: boolean): RobotMaterials {
   const materials = useMemo<RobotMaterials>(() => {
     if (ghost) {
       // The outline to build onto: one faint aqua glass, everything else hidden by it.
-      const g = new THREE.MeshBasicMaterial({ color: palette.aqua, transparent: true, opacity: 0.16, depthWrite: false });
+      const g = new THREE.MeshBasicMaterial({ color: palette.mint, transparent: true, opacity: 0.18, depthWrite: false });
       return { chrome: g, jelly: g, aqua: g, visor: g, eye: g, lime: g };
     }
     const physical = !low;
@@ -536,8 +536,8 @@ function useRobotMaterials(ghost: boolean): RobotMaterials {
       ? new THREE.MeshPhysicalMaterial({ color: palette.chrome, metalness: 1, roughness: 0.06, envMapIntensity: 1.3, iridescence: 0.2 })
       : new THREE.MeshStandardMaterial({ color: palette.chrome, metalness: 1, roughness: 0.08, envMapIntensity: 1.3 });
     const jelly = physical
-      ? new THREE.MeshPhysicalMaterial({ color: palette.lilac, roughness: 0.08, transparent: true, opacity: 0.62, clearcoat: 1, clearcoatRoughness: 0.03, iridescence: 0.6, iridescenceIOR: 1.3, envMapIntensity: 1.4 })
-      : new THREE.MeshStandardMaterial({ color: palette.lilac, roughness: 0.12, transparent: true, opacity: 0.7, envMapIntensity: 1.2 });
+      ? new THREE.MeshPhysicalMaterial({ color: palette.mint, roughness: 0.08, transparent: true, opacity: 0.62, clearcoat: 1, clearcoatRoughness: 0.03, iridescence: 0.6, iridescenceIOR: 1.3, envMapIntensity: 1.4 })
+      : new THREE.MeshStandardMaterial({ color: palette.mint, roughness: 0.12, transparent: true, opacity: 0.7, envMapIntensity: 1.2 });
     const aqua = physical
       ? new THREE.MeshPhysicalMaterial({ color: palette.aqua, roughness: 0.18, clearcoat: 1, clearcoatRoughness: 0.04, envMapIntensity: 1.1 })
       : new THREE.MeshStandardMaterial({ color: palette.aqua, roughness: 0.25 });
@@ -562,7 +562,7 @@ type PartHandlers = Partial<{
 
 /**
  * The neo-Y2K toy robot from the concept art: a mirror-chrome dome with a black glass visor
- * and glowing aqua eyes, a see-through lilac jelly body with chrome gears turning inside,
+ * and glowing aqua eyes, a see-through mint jelly body with chrome gears turning inside,
  * aqua arms, chrome boots, and a lime bulb on its antenna.
  *
  * It is six separate parts (ROBOT_PARTS), each a top-level group at its ROBOT_HOME, so the
@@ -770,7 +770,7 @@ export function useReevuScreen() {
       g.fill();
     };
     const star = (cx: number, cy: number, on: boolean) => {
-      g.fillStyle = on ? "#7B5CFF" : "#DCE6F7";
+      g.fillStyle = on ? "#14a3b0" : "#dcefe0";
       g.beginPath();
       for (let k = 0; k < 10; k++) {
         const a = (k * Math.PI) / 5 - Math.PI / 2;
@@ -779,60 +779,60 @@ export function useReevuScreen() {
       }
       g.fill();
     };
-    const lines = (x: number, y: number, widths: number[], color = "#DCE6F7") =>
+    const lines = (x: number, y: number, widths: number[], color = "#dcefe0") =>
       widths.forEach((w, i) => round(x, y + i * 24, w, 12, 6, color));
 
-    g.fillStyle = "#F6F8FF";
+    g.fillStyle = "#f5fbf5";
     g.fillRect(0, 0, W, H);
-    round(0, 0, 230, H, 0, "#22307A");
-    g.fillStyle = "#EEF2FF";
+    round(0, 0, 230, H, 0, "#1c4424");
+    g.fillStyle = "#eef8ef";
     g.font = "700 40px system-ui, sans-serif";
     g.fillText("Reevu", 40, 80);
-    for (let i = 0; i < 7; i++) round(40, 150 + i * 62, i === 1 ? 150 : 120, 22, 11, i === 1 ? "#7B5CFF" : "rgba(238,242,255,0.35)");
+    for (let i = 0; i < 7; i++) round(40, 150 + i * 62, i === 1 ? 150 : 120, 22, 11, i === 1 ? "#14a3b0" : "rgba(238,248,239,0.35)");
 
-    g.fillStyle = "#0B1433";
+    g.fillStyle = "#0b1f10";
     g.font = "600 34px system-ui, sans-serif";
     g.fillText("Business panel", 280, 80);
-    round(900, 50, 250, 44, 22, "#DCE6F7");
+    round(900, 50, 250, 44, 22, "#dcefe0");
 
     // rating cards
     for (let i = 0; i < 3; i++) {
       round(280 + i * 300, 130, 270, 150, 20, "#FFFFFF");
-      round(305 + i * 300, 160, 110, 16, 8, "#B9A6FF");
+      round(305 + i * 300, 160, 110, 16, 8, "#a8e6b8");
       for (let s = 0; s < 5; s++) star(320 + i * 300 + s * 40, 230, s < 4 - (i % 2));
     }
     // trend chart
     round(280, 310, 570, 440, 20, "#FFFFFF");
     const bars = [0.35, 0.5, 0.42, 0.66, 0.58, 0.8, 0.72, 0.9];
-    bars.forEach((b, i) => round(320 + i * 62, 700 - b * 320, 38, b * 320, 10, i === bars.length - 1 ? "#3B5BFF" : "#5CE1E6"));
+    bars.forEach((b, i) => round(320 + i * 62, 700 - b * 320, 38, b * 320, 10, i === bars.length - 1 ? "#2f8f3a" : "#5CE1E6"));
     round(880, 310, 270, 440, 20, "#FFFFFF");
     for (let i = 0; i < 5; i++) {
-      round(905, 340 + i * 82, 44, 44, 22, i % 2 ? "#B9A6FF" : "#5CE1E6");
-      lines(965, 346 + i * 82, [150, 110], "#22307A");
+      round(905, 340 + i * 82, 44, 44, 22, i % 2 ? "#a8e6b8" : "#5CE1E6");
+      lines(965, 346 + i * 82, [150, 110], "#1c4424");
     }
 
     // recent reviews
-    g.fillStyle = "#0B1433";
+    g.fillStyle = "#0b1f10";
     g.font = "600 30px system-ui, sans-serif";
     g.fillText("Recent reviews", 280, 820);
     for (let i = 0; i < 6; i++) {
       const y = 860 + i * 170;
       round(280, y, 870, 150, 20, "#FFFFFF");
-      round(305, y + 25, 56, 56, 28, i % 2 ? "#B9A6FF" : "#5CE1E6");
-      lines(380, y + 30, [180, 120], "#22307A");
+      round(305, y + 25, 56, 56, 28, i % 2 ? "#a8e6b8" : "#5CE1E6");
+      lines(380, y + 30, [180, 120], "#1c4424");
       for (let s = 0; s < 5; s++) star(1000 + s * 30, y + 45, s < 5 - (i % 3));
       lines(305, y + 100, [760, 540]);
     }
 
     // moderation queue (super admin)
-    g.fillStyle = "#0B1433";
+    g.fillStyle = "#0b1f10";
     g.fillText("Moderation queue", 280, 1920);
     for (let i = 0; i < 4; i++) {
       const y = 1960 + i * 150;
       round(280, y, 870, 130, 20, "#FFFFFF");
       lines(305, y + 30, [420, 300]);
-      round(900, y + 40, 100, 44, 22, "#3B5BFF");
-      round(1015, y + 40, 110, 44, 22, "#EEF2FF");
+      round(900, y + 40, 100, 44, 22, "#2f8f3a");
+      round(1015, y + 40, 110, 44, 22, "#eef8ef");
     }
 
     const t = new THREE.CanvasTexture(c);
