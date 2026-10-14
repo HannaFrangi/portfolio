@@ -64,6 +64,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="en"
       data-theme="light"
+      data-flavor="green"
       suppressHydrationWarning
       className={`${serif.variable} ${display.variable} ${geistSans.variable} ${geistMono.variable} antialiased`}
     >

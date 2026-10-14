@@ -1,9 +1,11 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import { THEME_KEY as KEY } from "./theme-boot";
+import { FLAVOR_KEY, THEME_KEY as KEY } from "./theme-boot";
 
 export type Theme = "light" | "dark";
+/** The colour world: green frutiger meadow (default) or the aqua and lilac sky. */
+export type Flavor = "green" | "aqua";
 
 const media = "(prefers-color-scheme: dark)";
 
@@ -32,7 +34,7 @@ function saved() {
 
 function subscribe(onChange: () => void) {
   const observer = new MutationObserver(onChange);
-  observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+  observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme", "data-flavor"] });
   // No saved choice yet: follow the system when it flips (e.g. sunset on macOS).
   const mq = window.matchMedia(media);
   const onSystem = () => {
@@ -47,4 +49,21 @@ function subscribe(onChange: () => void) {
 
 export function useTheme(): Theme {
   return useSyncExternalStore(subscribe, getTheme, () => "light");
+}
+
+export function getFlavor(): Flavor {
+  return document.documentElement.dataset.flavor === "aqua" ? "aqua" : "green";
+}
+
+export function setFlavor(flavor: Flavor) {
+  document.documentElement.dataset.flavor = flavor;
+  try {
+    localStorage.setItem(FLAVOR_KEY, flavor);
+  } catch {
+    // As above: works for this visit.
+  }
+}
+
+export function useFlavor(): Flavor {
+  return useSyncExternalStore(subscribe, getFlavor, () => "green");
 }

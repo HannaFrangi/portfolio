@@ -14,8 +14,8 @@ const subscribeCoarse = (cb: () => void) => {
 };
 
 /**
- * Build-a-bot, the peak of the page: a chrome and jelly robot in six parts, dragged back
- * together until it boots up and comes alive. Ties the robotics teaching to the dev work.
+ * Build-a-bot, the peak of the page: the RoboStars logo in six pieces, dragged back together
+ * until it boots up and comes alive. Ties the robotics teaching to the dev work.
  * The buttons give keyboard and screen-reader users the same outcome as dragging.
  */
 export default function RobotBuilder() {
@@ -36,11 +36,11 @@ export default function RobotBuilder() {
             id="builder-title"
             className="font-display text-[clamp(2.2rem,4.4vw,3.6rem)] font-bold leading-[1.02] tracking-[-0.03em]"
           >
-            Build a bot. Watch it wake up.
+            Build a RoboStars bot. Watch it wake up.
           </h2>
           <p data-reveal className="mt-4 max-w-md leading-7 text-ink-soft">
-            I teach kids to build robots at RoboStars. Your turn: drag the six parts onto the outline. When the last one
-            clicks in, it comes alive.
+            I teach kids to build robots at RoboStars. Your turn: drag the pieces of our logo onto the outline. When the
+            last one clicks in, it comes alive.
             {/* Touch screens never need the keyboard route, so they don't hear about it. */}
             {!coarse && <> Using a keyboard? &ldquo;Build it for me&rdquo; assembles it in one go.</>}
           </p>
@@ -73,7 +73,7 @@ export default function RobotBuilder() {
           {/* Progress lives on the board, so it stays in view while you play (phones scroll the copy away). */}
           <div className="pointer-events-none absolute left-4 top-4 max-w-[60%] md:left-5 md:top-5">
             <p aria-live="polite" className="font-display text-base font-bold leading-snug text-olive">
-              {done ? <>Built! It&apos;s alive. Give it a poke.</> : <>{placed} / {PIECES} parts</>}
+              {done ? <>Built! The RoboStars bot is alive. Give it a poke.</> : <>{placed} / {PIECES} pieces</>}
             </p>
             {/* progress rail: one pip per piece */}
             <div aria-hidden className="mt-2 flex gap-1">

@@ -8,6 +8,7 @@ import RobotBuilder from "@/components/RobotBuilder";
 import ScrollDriver from "@/components/ScrollDriver";
 import SmoothScroll from "@/components/SmoothScroll";
 import StageMount from "@/components/StageMount";
+import FlavorToggle from "@/components/FlavorToggle";
 import ThemeToggle from "@/components/ThemeToggle";
 import ThreadPlane from "@/components/ThreadPlane";
 import { Arrow } from "@/components/icons";
@@ -28,6 +29,8 @@ import {
 import { siteUrl } from "@/lib/site";
 import aboutWaterDark from "./media/about-water-dark.jpg";
 import aboutWaterLight from "./media/about-water-light.jpg";
+import heroSkyAquaDark from "./media/hero-sky-aqua-dark.jpg";
+import heroSkyAquaLight from "./media/hero-sky-aqua-light.jpg";
 import heroSkyDark from "./media/hero-sky-dark.jpg";
 import heroSkyLight from "./media/hero-sky-light.jpg";
 import portrait from "../public/textures/portrait.png";
@@ -143,6 +146,7 @@ function Nav() {
           ))}
         </ul>
         <div className="flex items-center gap-2">
+          <FlavorToggle />
           <ThemeToggle />
           <a href={person.cv} download className="pill pill-soft !py-1.5 max-md:hidden">
             CV
@@ -168,19 +172,30 @@ function Hero() {
           sits under the WebGL portrait, chrome and bubbles: sky, type, subject, foreground. */}
       <div aria-hidden className='plate absolute inset-0 -z-10'>
         <div className='plate-drift absolute inset-[-6%]'>
-          <div className='sky-light absolute inset-0'>
-            <Image
-              src={heroSkyLight}
-              alt=''
-              fill
-              preload
-              placeholder='blur'
-              sizes='100vw'
-              className='object-cover object-[50%_62%]'
-            />
+          {/* Green meadow (default) and the aqua sky, each with a day and a night plate. */}
+          <div className='flavor-green absolute inset-0'>
+            <div className='sky-light absolute inset-0'>
+              <Image
+                src={heroSkyLight}
+                alt=''
+                fill
+                preload
+                placeholder='blur'
+                sizes='100vw'
+                className='object-cover object-[50%_62%]'
+              />
+            </div>
+            <div className='sky-dark absolute inset-0'>
+              <Image src={heroSkyDark} alt='' fill placeholder='blur' sizes='100vw' className='object-cover object-[50%_62%]' />
+            </div>
           </div>
-          <div className='sky-dark absolute inset-0'>
-            <Image src={heroSkyDark} alt='' fill placeholder='blur' sizes='100vw' className='object-cover object-[50%_62%]' />
+          <div className='flavor-aqua absolute inset-0'>
+            <div className='sky-light absolute inset-0'>
+              <Image src={heroSkyAquaLight} alt='' fill placeholder='blur' sizes='100vw' className='object-cover object-[50%_62%]' />
+            </div>
+            <div className='sky-dark absolute inset-0'>
+              <Image src={heroSkyAquaDark} alt='' fill placeholder='blur' sizes='100vw' className='object-cover object-[50%_62%]' />
+            </div>
           </div>
         </div>
       </div>

@@ -2,9 +2,10 @@
 
 import { useEffect, useId, useMemo, useRef } from "react";
 import * as THREE from "three";
-import { useFrame, type ThreeElements, type ThreeEvent } from "@react-three/fiber";
+import { useFrame, type ThreeElements } from "@react-three/fiber";
 import { RoundedBox, useTexture } from "@react-three/drei";
 import { textureFor, useQuality } from "@/lib/quality";
+import { useFlavor } from "@/lib/theme";
 import {
   FinishMaterial,
   blobGeometry,
@@ -17,6 +18,7 @@ import {
   palette,
   pointer,
   useDetail,
+  useFlavorColors,
   type Finish,
 } from "./kit";
 
@@ -481,10 +483,8 @@ export type RobotDrive = {
   cheer?: number;
 };
 
-export const ROBOT_PARTS = ["head", "body", "left arm", "right arm", "left leg", "right leg"] as const;
-
-/** Where each part sits in the built robot, in robot units (feet at y = 0, about 3.6 tall). */
-export const ROBOT_HOME: V3[] = [
+/** Where each part (head, body, arms, legs) sits, in robot units (feet at y = 0, about 3.6 tall). */
+const ROBOT_HOME: V3[] = [
   [0, 2.6, 0],
   [0, 1.5, 0],
   [-0.76, 1.86, 0],
@@ -523,21 +523,17 @@ const visorGeometry = () => (visorGeo ??= new THREE.SphereGeometry(0.645, 48, 24
 
 type RobotMaterials = Record<"chrome" | "jelly" | "aqua" | "visor" | "eye" | "lime", THREE.Material>;
 
-function useRobotMaterials(ghost: boolean): RobotMaterials {
+function useRobotMaterials(): RobotMaterials {
   const low = useQuality() === "low";
+  const { jelly: tint } = useFlavorColors();
   const materials = useMemo<RobotMaterials>(() => {
-    if (ghost) {
-      // The outline to build onto: one faint aqua glass, everything else hidden by it.
-      const g = new THREE.MeshBasicMaterial({ color: palette.mint, transparent: true, opacity: 0.18, depthWrite: false });
-      return { chrome: g, jelly: g, aqua: g, visor: g, eye: g, lime: g };
-    }
     const physical = !low;
     const chrome = physical
       ? new THREE.MeshPhysicalMaterial({ color: palette.chrome, metalness: 1, roughness: 0.06, envMapIntensity: 1.3, iridescence: 0.2 })
       : new THREE.MeshStandardMaterial({ color: palette.chrome, metalness: 1, roughness: 0.08, envMapIntensity: 1.3 });
     const jelly = physical
-      ? new THREE.MeshPhysicalMaterial({ color: palette.mint, roughness: 0.08, transparent: true, opacity: 0.62, clearcoat: 1, clearcoatRoughness: 0.03, iridescence: 0.6, iridescenceIOR: 1.3, envMapIntensity: 1.4 })
-      : new THREE.MeshStandardMaterial({ color: palette.mint, roughness: 0.12, transparent: true, opacity: 0.7, envMapIntensity: 1.2 });
+      ? new THREE.MeshPhysicalMaterial({ color: tint, roughness: 0.08, transparent: true, opacity: 0.62, clearcoat: 1, clearcoatRoughness: 0.03, iridescence: 0.6, iridescenceIOR: 1.3, envMapIntensity: 1.4 })
+      : new THREE.MeshStandardMaterial({ color: tint, roughness: 0.12, transparent: true, opacity: 0.7, envMapIntensity: 1.2 });
     const aqua = physical
       ? new THREE.MeshPhysicalMaterial({ color: palette.aqua, roughness: 0.18, clearcoat: 1, clearcoatRoughness: 0.04, envMapIntensity: 1.1 })
       : new THREE.MeshStandardMaterial({ color: palette.aqua, roughness: 0.25 });
@@ -547,42 +543,23 @@ function useRobotMaterials(ghost: boolean): RobotMaterials {
     const eye = new THREE.MeshStandardMaterial({ color: palette.aqua, emissive: palette.aqua, emissiveIntensity: 2.4, toneMapped: false });
     const lime = new THREE.MeshStandardMaterial({ color: palette.lime, emissive: palette.lime, emissiveIntensity: 1.2, roughness: 0.2, toneMapped: false });
     return { chrome, jelly, aqua, visor, eye, lime };
-  }, [ghost, low]);
+  }, [low, tint]);
   useEffect(() => () => new Set(Object.values(materials)).forEach((m) => m.dispose()), [materials]);
   return materials;
 }
 
-type PartHandlers = Partial<{
-  onPointerDown: (e: ThreeEvent<PointerEvent>) => void;
-  onPointerMove: (e: ThreeEvent<PointerEvent>) => void;
-  onPointerUp: (e: ThreeEvent<PointerEvent>) => void;
-  onPointerOver: (e: ThreeEvent<PointerEvent>) => void;
-  onPointerOut: (e: ThreeEvent<PointerEvent>) => void;
-}>;
-
 /**
  * The neo-Y2K toy robot from the concept art: a mirror-chrome dome with a black glass visor
- * and glowing aqua eyes, a see-through mint jelly body with chrome gears turning inside,
- * aqua arms, chrome boots, and a lime bulb on its antenna.
- *
- * It is six separate parts (ROBOT_PARTS), each a top-level group at its ROBOT_HOME, so the
- * build-a-bot game can pull them apart and the robot can be put back together. Animation
- * runs on groups inside each part and never fights whoever positions the parts.
+ * and glowing aqua eyes, a see-through jelly body (mint or lilac, by flavour) with chrome
+ * gears turning inside, aqua arms, chrome boots, and a lime bulb on its antenna.
  */
 export function Robot({
   drive,
-  ghost = false,
-  partRef,
-  partHandlers,
   ...props
 }: {
   drive?: { current: RobotDrive };
-  /** Draw the robot as a faint outline instead (the build-a-bot target). */
-  ghost?: boolean;
-  partRef?: (i: number, el: THREE.Group | null) => void;
-  partHandlers?: (i: number) => PartHandlers;
 } & ThreeElements["group"]) {
-  const mat = useRobotMaterials(ghost);
+  const mat = useRobotMaterials();
   const head = useRef<THREE.Group>(null);
   const armL = useRef<THREE.Group>(null);
   const armR = useRef<THREE.Group>(null);
@@ -594,7 +571,6 @@ export function Robot({
   const bulb = useRef<THREE.Mesh>(null);
 
   useFrame((state, delta) => {
-    if (ghost) return;
     const t = state.clock.elapsedTime;
     const dt = Math.min(delta, 1 / 30);
     const d = drive?.current;
@@ -636,7 +612,7 @@ export function Robot({
   });
 
   const part = (i: number, children: React.ReactNode) => (
-    <group key={i} ref={(el) => partRef?.(i, el)} position={ROBOT_HOME[i]} {...partHandlers?.(i)}>
+    <group key={i} position={ROBOT_HOME[i]}>
       <group ref={(el) => void (bob.current[i] = el)}>{children}</group>
     </group>
   );
@@ -751,10 +727,23 @@ export function Robot({
  * a tall review dashboard in the site palette (shapes, not invented numbers),
  * tall enough to scroll like the real captures.
  */
+const REEVU_AQUA: Record<string, string> = {
+  "#14a3b0": "#7B5CFF",
+  "#dcefe0": "#DCE6F7",
+  "#f5fbf5": "#F6F8FF",
+  "#1c4424": "#22307A",
+  "#eef8ef": "#EEF2FF",
+  "rgba(238,248,239,0.35)": "rgba(238,242,255,0.35)",
+  "#0b1f10": "#0B1433",
+  "#a8e6b8": "#B9A6FF",
+  "#2f8f3a": "#3B5BFF",
+};
+
 export function useReevuScreen() {
   // Drawn at half resolution on the low tier, like the photographed screens.
   const k = useQuality() === "low" ? 0.5 : 1;
-  return useMemo(() => {
+  const flavor = useFlavor();
+  const texture = useMemo(() => {
     if (typeof document === "undefined") return undefined;
     const W = 1200, H = 2600;
     const c = document.createElement("canvas");
@@ -763,14 +752,16 @@ export function useReevuScreen() {
     const g = c.getContext("2d");
     if (!g) return undefined;
     g.scale(k, k);
+    // Drawn in the green palette; the aqua flavour swaps each colour for its sky twin.
+    const paint = (fill: string) => (flavor === "aqua" ? (REEVU_AQUA[fill] ?? fill) : fill);
     const round = (x: number, y: number, w: number, h: number, r: number, fill: string) => {
-      g.fillStyle = fill;
+      g.fillStyle = paint(fill);
       g.beginPath();
       g.roundRect(x, y, w, h, r);
       g.fill();
     };
     const star = (cx: number, cy: number, on: boolean) => {
-      g.fillStyle = on ? "#14a3b0" : "#dcefe0";
+      g.fillStyle = paint(on ? "#14a3b0" : "#dcefe0");
       g.beginPath();
       for (let k = 0; k < 10; k++) {
         const a = (k * Math.PI) / 5 - Math.PI / 2;
@@ -782,15 +773,15 @@ export function useReevuScreen() {
     const lines = (x: number, y: number, widths: number[], color = "#dcefe0") =>
       widths.forEach((w, i) => round(x, y + i * 24, w, 12, 6, color));
 
-    g.fillStyle = "#f5fbf5";
+    g.fillStyle = paint("#f5fbf5");
     g.fillRect(0, 0, W, H);
     round(0, 0, 230, H, 0, "#1c4424");
-    g.fillStyle = "#eef8ef";
+    g.fillStyle = paint("#eef8ef");
     g.font = "700 40px system-ui, sans-serif";
     g.fillText("Reevu", 40, 80);
     for (let i = 0; i < 7; i++) round(40, 150 + i * 62, i === 1 ? 150 : 120, 22, 11, i === 1 ? "#14a3b0" : "rgba(238,248,239,0.35)");
 
-    g.fillStyle = "#0b1f10";
+    g.fillStyle = paint("#0b1f10");
     g.font = "600 34px system-ui, sans-serif";
     g.fillText("Business panel", 280, 80);
     round(900, 50, 250, 44, 22, "#dcefe0");
@@ -812,7 +803,7 @@ export function useReevuScreen() {
     }
 
     // recent reviews
-    g.fillStyle = "#0b1f10";
+    g.fillStyle = paint("#0b1f10");
     g.font = "600 30px system-ui, sans-serif";
     g.fillText("Recent reviews", 280, 820);
     for (let i = 0; i < 6; i++) {
@@ -825,7 +816,7 @@ export function useReevuScreen() {
     }
 
     // moderation queue (super admin)
-    g.fillStyle = "#0b1f10";
+    g.fillStyle = paint("#0b1f10");
     g.fillText("Moderation queue", 280, 1920);
     for (let i = 0; i < 4; i++) {
       const y = 1960 + i * 150;
@@ -839,7 +830,9 @@ export function useReevuScreen() {
     t.colorSpace = THREE.SRGBColorSpace;
     t.anisotropy = 8;
     return t;
-  }, [k]);
+  }, [k, flavor]);
+  useEffect(() => () => texture?.dispose(), [texture]);
+  return texture;
 }
 
 /* ---------------------------------------------------------- robostars logo */

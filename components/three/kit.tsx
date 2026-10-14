@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import * as THREE from "three";
 import { useThree } from "@react-three/fiber";
 import { useQuality } from "@/lib/quality";
-import { useTheme } from "@/lib/theme";
+import { type Flavor, useFlavor, useTheme } from "@/lib/theme";
 
 /** Green frutiger palette, shared with globals.css: liquid chrome, mint and aqua glass, one lime spark. */
 export const palette = {
@@ -16,7 +16,37 @@ export const palette = {
   forest: '#1C4424',
   lime: '#C8F53A',
   chrome: '#eef2f8',
+  lilac: '#B9A6FF',
 };
+
+/**
+ * What changes with the flavour switch: the jelly colour, and the studio (lights, the
+ * fallback light panels, and which sky panorama the chrome reflects).
+ */
+const FLAVORS = {
+  green: {
+    jelly: palette.mint,
+    sky: 'env',
+    room: { light: '#eaf6ea', dark: '#05130a' },
+    panels: { light: ['#c8f5d6', '#e6f9c0', '#ffffff'], dark: ['#5ce1e6', '#c8f53a', '#163a24'] },
+    hemi: { light: ['#f4fff4', '#cfeec0'], dark: ['#3f7a5a', '#040c06'] },
+    key: { light: '#ffffff', dark: '#d8ffe6' },
+    rim: { light: '#c8f5d6', dark: '#7ee8a8' },
+  },
+  aqua: {
+    jelly: palette.lilac,
+    sky: 'env-aqua',
+    room: { light: '#e8f1fb', dark: '#070b1e' },
+    panels: { light: ['#bdf3f5', '#ddd3ff', '#ffffff'], dark: ['#5ce1e6', '#b9a6ff', '#1a2350'] },
+    hemi: { light: ['#f2fbff', '#c9bcff'], dark: ['#4a5aa8', '#05060f'] },
+    key: { light: '#ffffff', dark: '#cdeeff' },
+    rim: { light: '#bdf3f5', dark: '#b49cff' },
+  },
+} satisfies Record<Flavor, unknown>;
+
+export function useFlavorColors() {
+  return FLAVORS[useFlavor()];
+}
 
 /** Window-level pointer, -1..1, shared by every view. Not React state. */
 export const pointer = { x: 0, y: 0, sx: 0, sy: 0 };
@@ -365,12 +395,14 @@ export function makeLiquidChrome(low: boolean, tint = palette.chrome) {
  * never does): soft mint and aqua light panels. Built once per theme, shared by every view.
  */
 const envCache = new Map<string, THREE.Texture>();
-function proceduralEnvironment(gl: THREE.WebGLRenderer, dark: boolean) {
-  const key = dark ? 'dark' : 'light';
+function proceduralEnvironment(gl: THREE.WebGLRenderer, dark: boolean, flavor: Flavor) {
+  const key = `${flavor}-${dark ? 'dark' : 'light'}`;
+  const f = FLAVORS[flavor];
+  const tone = dark ? 'dark' : 'light';
   const hit = envCache.get(key);
   if (hit) return hit;
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(dark ? '#05130a' : '#eaf6ea');
+  scene.background = new THREE.Color(f.room[tone]);
   const panel = (
     color: string,
     intensity: number,
@@ -391,9 +423,9 @@ function proceduralEnvironment(gl: THREE.WebGLRenderer, dark: boolean) {
     scene.add(mesh);
   };
   panel('#ffffff', dark ? 0.9 : 3, [0, 4, 3], [10, 3]);
-  panel(dark ? '#5ce1e6' : '#c8f5d6', dark ? 1.6 : 1.6, [-5, 0, 2], [6, 3]);
-  panel(dark ? '#c8f53a' : '#e6f9c0', dark ? 1.8 : 1.5, [5, -1, 2], [6, 2]);
-  panel(dark ? '#163a24' : '#ffffff', 1, [0, -4, 1], [10, 3]);
+  panel(f.panels[tone][0], 1.6, [-5, 0, 2], [6, 3]);
+  panel(f.panels[tone][1], dark ? 1.8 : 1.5, [5, -1, 2], [6, 2]);
+  panel(f.panels[tone][2], 1, [0, -4, 1], [10, 3]);
   const pmrem = new THREE.PMREMGenerator(gl);
   const texture = pmrem.fromScene(scene, 0.02).texture;
   pmrem.dispose();
@@ -403,11 +435,11 @@ function proceduralEnvironment(gl: THREE.WebGLRenderer, dark: boolean) {
 
 /** The generated sky panoramas, loaded once per theme and shared by every view. */
 const skyCache = new Map<string, Promise<THREE.Texture>>();
-function skyEnvironment(gl: THREE.WebGLRenderer, dark: boolean) {
-  const key = dark ? "dark" : "light";
+function skyEnvironment(gl: THREE.WebGLRenderer, dark: boolean, flavor: Flavor) {
+  const key = `${FLAVORS[flavor].sky}-${dark ? "dark" : "light"}`;
   let hit = skyCache.get(key);
   if (!hit) {
-    hit = new THREE.TextureLoader().loadAsync(`/textures/env-${key}.jpg`).then((t) => {
+    hit = new THREE.TextureLoader().loadAsync(`/textures/${key}.jpg`).then((t) => {
       t.mapping = THREE.EquirectangularReflectionMapping;
       t.colorSpace = THREE.SRGBColorSpace;
       const pmrem = new THREE.PMREMGenerator(gl);
@@ -422,42 +454,34 @@ function skyEnvironment(gl: THREE.WebGLRenderer, dark: boolean) {
 }
 
 /**
- * Daylight sky studio: cool key, mint bounce, and the sky panorama in every reflection.
- * Night shift turns the room deep green with mint and lime light strips.
+ * Daylight sky studio: cool key, a bounce in the flavour colour, and the sky panorama in
+ * every reflection. Night shift turns the room dark with coloured light strips.
  */
 export function Studio() {
   const dark = useTheme() === "dark";
+  const flavor = useFlavor();
+  const f = FLAVORS[flavor];
+  const tone = dark ? "dark" : "light";
   const gl = useThree((s) => s.gl);
-  const fallback = useMemo(() => proceduralEnvironment(gl, dark), [gl, dark]);
-  const [sky, setSky] = useState<{ key: boolean; tex: THREE.Texture } | null>(
-    null,
-  );
+  const fallback = useMemo(() => proceduralEnvironment(gl, dark, flavor), [gl, dark, flavor]);
+  const want = `${flavor}-${tone}`;
+  const [sky, setSky] = useState<{ key: string; tex: THREE.Texture } | null>(null);
   useEffect(() => {
     let live = true;
-    skyEnvironment(gl, dark).then(
-      (tex) => live && setSky({ key: dark, tex }),
+    skyEnvironment(gl, dark, flavor).then(
+      (tex) => live && setSky({ key: `${flavor}-${dark ? "dark" : "light"}`, tex }),
       () => {},
     );
     return () => {
       live = false;
     };
-  }, [gl, dark]);
-  const environment = sky && sky.key === dark ? sky.tex : fallback;
+  }, [gl, dark, flavor]);
+  const environment = sky && sky.key === want ? sky.tex : fallback;
   return (
     <>
-      <hemisphereLight
-        args={dark ? ['#3f7a5a', '#040c06', 0.7] : ['#f4fff4', '#cfeec0', 1.1]}
-      />
-      <directionalLight
-        position={[4, 6, 5]}
-        intensity={dark ? 1.4 : 2.1}
-        color={dark ? '#d8ffe6' : '#ffffff'}
-      />
-      <directionalLight
-        position={[-5, 2, -3]}
-        intensity={dark ? 2.2 : 0.9}
-        color={dark ? '#7ee8a8' : '#c8f5d6'}
-      />
+      <hemisphereLight args={[f.hemi[tone][0], f.hemi[tone][1], dark ? 0.7 : 1.1]} />
+      <directionalLight position={[4, 6, 5]} intensity={dark ? 1.4 : 2.1} color={f.key[tone]} />
+      <directionalLight position={[-5, 2, -3]} intensity={dark ? 2.2 : 0.9} color={f.rim[tone]} />
       {/* shared across views, so never disposed when one view unmounts */}
       <primitive object={environment} attach='environment' dispose={null} />
     </>
