@@ -11,7 +11,7 @@ import StageMount from "@/components/StageMount";
 import ThemeToggle from "@/components/ThemeToggle";
 import ThreadPlane from "@/components/ThreadPlane";
 import { Arrow } from "@/components/icons";
-import { ClosingSpot, DeviceSpot, FeaturedSpot, HeroSpot } from "@/components/three/scenes";
+import { ClosingSpot, DeviceSpot, FeaturedSpot, HeroSpot } from "@/components/three/spots";
 import {
   certificates,
   clients,
@@ -27,7 +27,13 @@ import {
 } from "@/lib/content";
 import { siteUrl } from "@/lib/site";
 import aboutPaper from "./media/about-paper.jpg";
+import aboutWaterDark from "./media/about-water-dark.jpg";
+import aboutWaterLight from "./media/about-water-light.jpg";
 import heroPlate from "./media/hero-plate.jpg";
+import heroSkyAquaDark from "./media/hero-sky-aqua-dark.jpg";
+import heroSkyAquaLight from "./media/hero-sky-aqua-light.jpg";
+import heroSkyDark from "./media/hero-sky-dark.jpg";
+import heroSkyLight from "./media/hero-sky-light.jpg";
 import portrait from "../public/textures/portrait.png";
 
 /** One sentence the whole page should leave behind. */
@@ -166,15 +172,37 @@ function Hero() {
           under the WebGL portrait and blobs: landscape, type, subject, foreground. */}
       <div aria-hidden className='plate absolute inset-0 -z-10'>
         <div className='plate-drift absolute inset-[-6%]'>
-          <Image
-            src={heroPlate}
-            alt=''
-            fill
-            preload
-            placeholder='blur'
-            sizes='100vw'
-            className='object-cover object-[50%_62%]'
-          />
+          <div className='skin-classic absolute inset-0'>
+            <Image
+              src={heroPlate}
+              alt=''
+              fill
+              preload
+              placeholder='blur'
+              sizes='100vw'
+              className='object-cover object-[50%_62%]'
+            />
+          </div>
+          {/* The secret neo-Y2K look: a frutiger sky per flavour and theme. Hidden (and so never
+              loaded) until the Konami code unlocks it. */}
+          <div className='skin-y2k absolute inset-0'>
+            <div className='flavor-green absolute inset-0'>
+              <div className='sky-light absolute inset-0'>
+                <Image src={heroSkyLight} alt='' fill sizes='100vw' className='object-cover object-[50%_62%]' />
+              </div>
+              <div className='sky-dark absolute inset-0'>
+                <Image src={heroSkyDark} alt='' fill sizes='100vw' className='object-cover object-[50%_62%]' />
+              </div>
+            </div>
+            <div className='flavor-aqua absolute inset-0'>
+              <div className='sky-light absolute inset-0'>
+                <Image src={heroSkyAquaLight} alt='' fill sizes='100vw' className='object-cover object-[50%_62%]' />
+              </div>
+              <div className='sky-dark absolute inset-0'>
+                <Image src={heroSkyAquaDark} alt='' fill sizes='100vw' className='object-cover object-[50%_62%]' />
+              </div>
+            </div>
+          </div>
         </div>
       </div>
       {/* Outside the moving plate, so the hero always melts into the page below. */}
@@ -511,7 +539,18 @@ function PaperBackdrop() {
   return (
     <div aria-hidden className="absolute inset-0 overflow-hidden">
       <div className="paper absolute inset-[-8%]">
-        <Image src={aboutPaper} alt="" fill placeholder="blur" sizes="(min-width: 1152px) 1152px, 100vw" className="object-cover" />
+        <div className="skin-classic absolute inset-0">
+          <Image src={aboutPaper} alt="" fill placeholder="blur" sizes="(min-width: 1152px) 1152px, 100vw" className="object-cover" />
+        </div>
+        {/* neo-Y2K: underwater light, one per theme */}
+        <div className="skin-y2k absolute inset-0">
+          <div className="sky-light absolute inset-0">
+            <Image src={aboutWaterLight} alt="" fill sizes="(min-width: 1152px) 1152px, 100vw" className="object-cover" />
+          </div>
+          <div className="sky-dark absolute inset-0">
+            <Image src={aboutWaterDark} alt="" fill sizes="(min-width: 1152px) 1152px, 100vw" className="object-cover" />
+          </div>
+        </div>
       </div>
       <div className="light-sweep absolute inset-0" />
     </div>
@@ -529,7 +568,7 @@ function About() {
     >
       <div
         {...reveal(0)}
-        className="relative mx-auto max-w-6xl overflow-hidden rounded-[40px] text-paper shadow-[0_40px_80px_-40px_rgb(89_95_62/0.8)]"
+        className="relative mx-auto max-w-6xl overflow-hidden rounded-[40px] text-paper shadow-[0_40px_80px_-40px_rgb(var(--shade)/0.8)]"
       >
         <PaperBackdrop />
         {/* Olive scrims behind the copy only: the paper stays visible around them. */}

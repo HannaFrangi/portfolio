@@ -616,6 +616,8 @@ function ClosingScene({
 export type BuilderCommand = { type: "scatter" | "build"; n: number };
 
 const SNAP = 0.2; // how close (badge units) a piece must land to click into place
+/** Logo scale on the board. The victory pop multiplies this, so it must never be reset to 1. */
+const BOARD = 2.2;
 
 /**
  * The RoboStars logo in pieces on a table. Drag each piece onto its outline; within
@@ -649,15 +651,39 @@ function BuilderScene({
   });
   const scratch = useMemo(() => ({ plane: new THREE.Plane(new THREE.Vector3(0, 0, 1), 0), hit: new THREE.Vector3() }), []);
 
-  // Scatter across the table, away from the outline in the middle.
+  // Each piece's own centre and rough radius. Pieces are drawn in logo coordinates and
+  // turn about the logo's origin, so scattering has to aim the centre, not the origin.
+  const extents = useMemo(
+    () =>
+      parts.map((part) => {
+        part.geo.computeBoundingBox();
+        const box = part.geo.boundingBox!;
+        const centre = box.getCenter(new THREE.Vector3()).setZ(0);
+        const size = box.getSize(new THREE.Vector3());
+        return { centre, radius: Math.hypot(size.x, size.y) / 2 };
+      }),
+    [parts],
+  );
+
+  // Scatter either side of the outline, inside the box, clear of the progress label top-left.
   const scatter = () => {
     const g = game.current;
-    // Horizontal room in board units (board scale 2.2, camera at 5, fov 30).
-    const half = Math.max(0.55, ((5 * Math.tan(THREE.MathUtils.degToRad(15)) * size.width) / size.height) / 2.2 - 0.3);
+    // Half the visible area in board units (camera at 5, fov 30).
+    const halfY = (5 * Math.tan(THREE.MathUtils.degToRad(15))) / BOARD;
+    const halfX = (halfY * size.width) / size.height;
+    // antenna, head, left arm, right arm, star, point: alternate sides, spread top to bottom.
+    const rows = [0.12, 0.3, -0.02, 0.05, -0.3, -0.28];
     parts.forEach((_, i) => {
       const side = i % 2 === 0 ? -1 : 1;
-      g.pos[i].set(side * (0.45 + Math.random() * Math.max(0.05, half - 0.45)), (Math.random() - 0.5) * 0.35, 0);
-      g.rot[i] = (Math.random() - 0.5) * 1.6;
+      const { centre, radius } = extents[i];
+      const room = Math.max(0, halfX - radius * 0.85 - 0.45);
+      // Narrow boxes (phones): stay inside the box even if that means overlapping the outline.
+      const x = Math.min(0.45 + Math.random() * room, halfX - radius * 1.15);
+      const target = new THREE.Vector3(side * x, rows[i] + (Math.random() - 0.5) * 0.08, 0);
+      target.y = THREE.MathUtils.clamp(target.y, -halfY + radius * 0.8, halfY - radius * 0.8);
+      g.rot[i] = (Math.random() - 0.5) * 1.2;
+      // pos = target - (centre turned by the piece's rotation)
+      g.pos[i].copy(target).sub(centre.clone().applyAxisAngle(new THREE.Vector3(0, 0, 1), g.rot[i]));
       g.placed[i] = false;
     });
     g.won = -10;
@@ -735,7 +761,7 @@ function BuilderScene({
     if (board.current) {
       const k = since < 0 || motion.reduced ? 0 : clamp01(since / 1.4);
       board.current.rotation.y = easeInOut(k) * Math.PI * 2;
-      board.current.scale.setScalar(1 + Math.sin(Math.PI * k) * 0.12);
+      board.current.scale.setScalar(BOARD * (1 + Math.sin(Math.PI * k) * 0.12));
     }
     if (sparkles.current) {
       const k = since < 0 ? 1 : clamp01(since / 1.6);
@@ -785,7 +811,7 @@ function BuilderScene({
   };
 
   return (
-    <group ref={board} scale={2.2}>
+    <group ref={board} scale={BOARD}>
       {/* the outline to build onto */}
       {parts.map((part, i) => (
         <mesh key={`ghost-${i}`} geometry={part.geo} position={[0, 0, -0.12]} scale={[1, 1, 0.05]}>

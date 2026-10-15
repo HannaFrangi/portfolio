@@ -50,3 +50,6 @@ graphify-out/
 /test-results/
 /playwright-report/
 /blob-report/
+
+# scroll-craft workspace: briefs and raw kie.ai generations (63 MB of PNGs)
+/scrollcraft/

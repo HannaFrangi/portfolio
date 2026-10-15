@@ -24,6 +24,14 @@ const display = localFont({
   variable: "--font-syne",
 });
 
+// Wide geometric display face for the secret neo-Y2K look (variable, 500-800). Not
+// preloaded: only visitors who unlock that look ever need it.
+const displayY2k = localFont({
+  src: [{ path: "./fonts/LexendExa-latin.woff2", weight: "500 800" }],
+  variable: "--font-lexend-exa",
+  preload: false,
+});
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -67,8 +75,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="en"
       data-theme="light"
+      data-skin="classic"
+      data-flavor="green"
       suppressHydrationWarning
-      className={`${serif.variable} ${display.variable} ${geistSans.variable} ${geistMono.variable} antialiased`}
+      className={`${serif.variable} ${display.variable} ${displayY2k.variable} ${geistSans.variable} ${geistMono.variable} antialiased`}
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeBootScript }} />

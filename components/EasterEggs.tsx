@@ -2,7 +2,8 @@
 
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { person } from "@/lib/content";
-import { setTheme, useTheme } from "@/lib/theme";
+import { loadY2k } from "@/components/three/spots";
+import { getFlavor, getSkin, setFlavor, setSkin, setTheme, useTheme } from "@/lib/theme";
 
 const ROBOT = String.raw`
      o
@@ -47,9 +48,36 @@ const subscribeClock = (cb: () => void) => {
 
 const DISMISSED = "midnight-dismissed";
 
+/** ↑ ↑ ↓ ↓ ← → ← → B A. On touch: the same as swipes, then two taps for B and A. */
+const KONAMI = ["up", "up", "down", "down", "left", "right", "left", "right", "b", "a"];
+const KEYS: Record<string, string> = { ArrowUp: "up", ArrowDown: "down", ArrowLeft: "left", ArrowRight: "right", b: "b", a: "a" };
+
 /**
- * Small hidden extras: a console greeting, and for late-night visitors a badge
- * plus stars in the Night shift sky (CSS keys off html[data-midnight]).
+ * Each entry of the code moves to the next look: the classic site, then the neo-Y2K site
+ * in green, then in aqua, then back. The new look opens as a circle growing from the
+ * middle where supported. The neo-Y2K 3D is fetched first, so it's ready when it appears.
+ */
+async function nextLook() {
+  const skin = getSkin(), flavor = getFlavor();
+  const apply = () => {
+    if (skin === "classic") {
+      setFlavor("green");
+      setSkin("y2k");
+    } else if (flavor === "green") setFlavor("aqua");
+    else setSkin("classic");
+  };
+  if (skin === "classic") await loadY2k().catch(() => {});
+  const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (reduced || !document.startViewTransition) return apply();
+  const root = document.documentElement;
+  root.classList.add("cheat");
+  document.startViewTransition(apply).finished.finally(() => root.classList.remove("cheat"));
+}
+
+/**
+ * Small hidden extras: a console greeting, for late-night visitors a badge plus stars in
+ * the Night shift sky (CSS keys off html[data-midnight]), and the Konami code, which
+ * unlocks the neo-Y2K look (see nextLook).
  */
 export default function EasterEggs() {
   const midnight = useSyncExternalStore(subscribeClock, isMidnight, () => false);
@@ -79,6 +107,51 @@ export default function EasterEggs() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  // The secret code. Nothing on the page mentions it.
+  useEffect(() => {
+    let at = 0;
+    const step = (token: string) => {
+      at = token === KONAMI[at] ? at + 1 : token === KONAMI[0] ? 1 : 0;
+      if (at < KONAMI.length) return;
+      at = 0;
+      void nextLook();
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if ((e.target as HTMLElement | null)?.closest("input, textarea, [contenteditable]")) return;
+      const token = KEYS[e.key.length === 1 ? e.key.toLowerCase() : e.key];
+      if (token) step(token);
+      else at = 0;
+    };
+    // Touch: a swipe is a long, mostly one-axis drag (finger direction); a tap stands in for B, then A.
+    let start: { x: number; y: number; t: number } | null = null;
+    const onStart = (e: TouchEvent) => {
+      const p = e.touches[0];
+      start = e.touches.length === 1 ? { x: p.clientX, y: p.clientY, t: e.timeStamp } : null;
+    };
+    const onEnd = (e: TouchEvent) => {
+      const p = e.changedTouches[0];
+      if (!start || !p) return;
+      const dx = p.clientX - start.x, dy = p.clientY - start.y;
+      const far = Math.max(Math.abs(dx), Math.abs(dy));
+      const quick = e.timeStamp - start.t < 300;
+      start = null;
+      if (far < 12 && quick) {
+        step(KONAMI[at] === "b" || KONAMI[at] === "a" ? KONAMI[at] : "tap");
+      } else if (far > 40) {
+        step(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? "right" : "left") : dy > 0 ? "down" : "up");
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    window.addEventListener("touchstart", onStart, { passive: true });
+    window.addEventListener("touchend", onEnd, { passive: true });
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("touchstart", onStart);
+      window.removeEventListener("touchend", onEnd);
+    };
   }, []);
 
   useEffect(() => {

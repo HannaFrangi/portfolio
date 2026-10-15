@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useSyncExternalStore } from "react";
-import { BuilderSpot, type BuilderCommand } from "./three/scenes";
+import { useSkin } from "@/lib/theme";
+import { BuilderSpot, type BuilderCommand } from "./three/spots";
 
 const PIECES = 6;
 
@@ -14,11 +15,17 @@ const subscribeCoarse = (cb: () => void) => {
 };
 
 /**
- * Build-a-robot: the RoboStars logo in pieces, dragged back together. Ties the robotics
- * teaching to the dev work. The buttons give keyboard and screen-reader users the same
- * outcome as dragging.
+ * Build-a-bot: the RoboStars logo in six pieces, dragged back together. Ties the robotics
+ * teaching to the dev work. In the secret neo-Y2K look the built logo boots up and comes
+ * alive. The buttons give keyboard and screen-reader users the same outcome as dragging.
  */
 export default function RobotBuilder() {
+  const skin = useSkin();
+  // A fresh game when the look changes: the other look's board starts scattered.
+  return <Builder key={skin} alive={skin === "y2k"} />;
+}
+
+function Builder({ alive }: { alive: boolean }) {
   const [placed, setPlaced] = useState(0);
   const [command, setCommand] = useState<BuilderCommand>({ type: "scatter", n: 0 });
   const [playing, setPlaying] = useState(false);
@@ -36,11 +43,15 @@ export default function RobotBuilder() {
             id="builder-title"
             className="font-display text-[clamp(2.2rem,4.4vw,3.6rem)] font-bold leading-[1.02] tracking-[-0.03em]"
           >
-            Build a RoboStars bot
+            {alive ? "Build a RoboStars bot. Watch it wake up." : "Build a RoboStars bot"}
           </h2>
           <p data-reveal className="mt-4 max-w-md leading-7 text-ink-soft">
-            I teach kids to build robots at RoboStars. Your turn: drag the pieces onto the outline and they click into
-            place.
+            I teach kids to build robots at RoboStars.{" "}
+            {alive ? (
+              <>Your turn: drag the pieces of our logo onto the outline. When the last one clicks in, it comes alive.</>
+            ) : (
+              <>Your turn: drag the pieces onto the outline and they click into place.</>
+            )}
             {/* Touch screens never need the keyboard route, so they don't hear about it. */}
             {!coarse && <> Using a keyboard? &ldquo;Build it for me&rdquo; assembles it in one go.</>}
           </p>
@@ -65,7 +76,7 @@ export default function RobotBuilder() {
         {/* touch-none lives on the card (the 3D box passes pointer events through) */}
         <div data-reveal className={`clay relative overflow-hidden ${interactive ? "touch-none" : ""}`}>
           <BuilderSpot
-            className="relative h-[340px] md:h-[400px]"
+            className={`relative ${alive ? "h-[380px] md:h-[480px]" : "h-[340px] md:h-[400px]"}`}
             command={command}
             interactive={interactive}
             onProgress={setPlaced}
@@ -73,14 +84,18 @@ export default function RobotBuilder() {
           {/* Progress lives on the board, so it stays in view while you play (phones scroll the copy away). */}
           <div className="pointer-events-none absolute left-4 top-4 max-w-[60%] md:left-5 md:top-5">
             <p aria-live="polite" className="font-display text-base font-bold leading-snug text-olive">
-              {done ? <>Built! That&apos;s the RoboStars logo.</> : <>{placed} / {PIECES} pieces</>}
+              {done ? (
+                alive ? <>Built! The RoboStars bot is alive. Give it a poke.</> : <>Built! That&apos;s the RoboStars logo.</>
+              ) : (
+                <>{placed} / {PIECES} pieces</>
+              )}
             </p>
             {/* progress rail: one pip per piece */}
             <div aria-hidden className="mt-2 flex gap-1">
               {Array.from({ length: PIECES }, (_, i) => (
                 <span
                   key={i}
-                  className={`h-1.5 w-5 rounded-full transition-colors duration-500 ${i < placed ? "bg-accent" : "bg-sand/60"}`}
+                  className={`h-1.5 w-5 rounded-full transition-colors duration-500 ${i < placed ? (alive ? "bg-moss" : "bg-accent") : "bg-sand/60"}`}
                 />
               ))}
             </div>
