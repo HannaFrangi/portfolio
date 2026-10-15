@@ -20,7 +20,7 @@ export const palette = {
 };
 
 /**
- * What changes with the flavour switch: the jelly colour, and the studio (lights, the
+ * What changes with the flavour (green, or aqua via the Konami code): the jelly colour, and the studio (lights, the
  * fallback light panels, and which sky panorama the chrome reflects).
  */
 const FLAVORS = {

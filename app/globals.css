@@ -444,7 +444,7 @@ html[data-portrait="3d"] .portrait-fallback {
 }
 
 /* The aqua flavour: the first neo-Y2K sky, pale aqua and lilac by day, navy at night.
-   Picked with the flavour switch; green is the default. */
+   Unlocked with the Konami code (components/EasterEggs.tsx); green is the default. */
 [data-flavor="aqua"] {
   --mist: #e8f1fb;
   --cream: #efecff;
@@ -720,24 +720,14 @@ html[data-portrait="3d"] .portrait-fallback {
   }
 }
 
-/* Flavour switch: a glossy gel orb in the colour you'd switch to. */
-.flavor-orb {
-  width: 18px;
-  height: 18px;
-  border-radius: 999px;
-  box-shadow: inset 0 -2px 4px rgb(0 0 0 / 0.18), 0 2px 6px -2px rgb(0 0 0 / 0.35);
-  transition: transform 0.5s var(--ease-out);
+/* The Konami code: the other flavour opens as a circle growing from the middle. */
+html.cheat::view-transition-old(root) {
+  animation: none;
 }
-.flavor-orb-green {
-  background:
-    radial-gradient(circle at 35% 28%, #fff 0 14%, transparent 40%),
-    linear-gradient(160deg, #c8f53a, #3fb950 55%, #1c6b28);
+html.cheat::view-transition-new(root) {
+  animation: cheat-reveal 0.9s var(--ease-out) both;
 }
-.flavor-orb-aqua {
-  background:
-    radial-gradient(circle at 35% 28%, #fff 0 14%, transparent 40%),
-    linear-gradient(160deg, #b9a6ff, #5ce1e6 55%, #2f48e0);
-}
-.flavor-toggle:hover .flavor-orb {
-  transform: rotate(-25deg) scale(1.12);
+@keyframes cheat-reveal {
+  from { clip-path: circle(0% at 50% 50%); }
+  to { clip-path: circle(75% at 50% 50%); }
 }

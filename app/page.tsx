@@ -8,7 +8,6 @@ import RobotBuilder from "@/components/RobotBuilder";
 import ScrollDriver from "@/components/ScrollDriver";
 import SmoothScroll from "@/components/SmoothScroll";
 import StageMount from "@/components/StageMount";
-import FlavorToggle from "@/components/FlavorToggle";
 import ThemeToggle from "@/components/ThemeToggle";
 import ThreadPlane from "@/components/ThreadPlane";
 import { Arrow } from "@/components/icons";
@@ -146,7 +145,6 @@ function Nav() {
           ))}
         </ul>
         <div className="flex items-center gap-2">
-          <FlavorToggle />
           <ThemeToggle />
           <a href={person.cv} download className="pill pill-soft !py-1.5 max-md:hidden">
             CV
