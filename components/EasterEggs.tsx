@@ -2,7 +2,8 @@
 
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { person } from "@/lib/content";
-import { getFlavor, setFlavor, setTheme, useTheme } from "@/lib/theme";
+import { loadY2k } from "@/components/three/spots";
+import { getFlavor, getSkin, setFlavor, setSkin, setTheme, useTheme } from "@/lib/theme";
 
 const ROBOT = String.raw`
      o
@@ -51,20 +52,32 @@ const DISMISSED = "midnight-dismissed";
 const KONAMI = ["up", "up", "down", "down", "left", "right", "left", "right", "b", "a"];
 const KEYS: Record<string, string> = { ArrowUp: "up", ArrowDown: "down", ArrowLeft: "left", ArrowRight: "right", b: "b", a: "a" };
 
-/** Flip between the green and aqua looks, revealed in a circle from the middle where supported. */
-function flipFlavor() {
-  const next = getFlavor() === "aqua" ? "green" : "aqua";
+/**
+ * Each entry of the code moves to the next look: the classic site, then the neo-Y2K site
+ * in green, then in aqua, then back. The new look opens as a circle growing from the
+ * middle where supported. The neo-Y2K 3D is fetched first, so it's ready when it appears.
+ */
+async function nextLook() {
+  const skin = getSkin(), flavor = getFlavor();
+  const apply = () => {
+    if (skin === "classic") {
+      setFlavor("green");
+      setSkin("y2k");
+    } else if (flavor === "green") setFlavor("aqua");
+    else setSkin("classic");
+  };
+  if (skin === "classic") await loadY2k().catch(() => {});
   const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  if (reduced || !document.startViewTransition) return setFlavor(next);
+  if (reduced || !document.startViewTransition) return apply();
   const root = document.documentElement;
   root.classList.add("cheat");
-  document.startViewTransition(() => setFlavor(next)).finished.finally(() => root.classList.remove("cheat"));
+  document.startViewTransition(apply).finished.finally(() => root.classList.remove("cheat"));
 }
 
 /**
  * Small hidden extras: a console greeting, for late-night visitors a badge plus stars in
  * the Night shift sky (CSS keys off html[data-midnight]), and the Konami code, which
- * swaps the green meadow for the aqua sky (and back).
+ * unlocks the neo-Y2K look (see nextLook).
  */
 export default function EasterEggs() {
   const midnight = useSyncExternalStore(subscribeClock, isMidnight, () => false);
@@ -103,7 +116,7 @@ export default function EasterEggs() {
       at = token === KONAMI[at] ? at + 1 : token === KONAMI[0] ? 1 : 0;
       if (at < KONAMI.length) return;
       at = 0;
-      flipFlavor();
+      void nextLook();
     };
     const onKey = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey || e.altKey) return;

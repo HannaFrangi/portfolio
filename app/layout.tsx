@@ -15,10 +15,21 @@ const serif = localFont({
   variable: "--font-instrument",
 });
 
-// Wide geometric display face for the neo-Y2K look (variable, 500-800).
 const display = localFont({
+  src: [
+    { path: "./fonts/Syne-500.woff2", weight: "500" },
+    { path: "./fonts/Syne-700.woff2", weight: "700" },
+    { path: "./fonts/Syne-800.woff2", weight: "800" },
+  ],
+  variable: "--font-syne",
+});
+
+// Wide geometric display face for the secret neo-Y2K look (variable, 500-800). Not
+// preloaded: only visitors who unlock that look ever need it.
+const displayY2k = localFont({
   src: [{ path: "./fonts/LexendExa-latin.woff2", weight: "500 800" }],
   variable: "--font-lexend-exa",
+  preload: false,
 });
 
 const geistSans = Geist({
@@ -53,8 +64,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#eaf6ea" },
-    { media: "(prefers-color-scheme: dark)", color: "#05130a" },
+    { media: "(prefers-color-scheme: light)", color: "#dbdfd9" },
+    { media: "(prefers-color-scheme: dark)", color: "#12150e" },
   ],
   colorScheme: "light dark",
 };
@@ -64,9 +75,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="en"
       data-theme="light"
+      data-skin="classic"
       data-flavor="green"
       suppressHydrationWarning
-      className={`${serif.variable} ${display.variable} ${geistSans.variable} ${geistMono.variable} antialiased`}
+      className={`${serif.variable} ${display.variable} ${displayY2k.variable} ${geistSans.variable} ${geistMono.variable} antialiased`}
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeBootScript }} />

@@ -1,51 +1,39 @@
 "use client";
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from "react";
 import * as THREE from "three";
 import { useThree } from "@react-three/fiber";
 import { useQuality } from "@/lib/quality";
-import { type Flavor, useFlavor, useTheme } from "@/lib/theme";
+import { useTheme } from "@/lib/theme";
 
-/** Green frutiger palette, shared with globals.css: liquid chrome, mint and aqua glass, one lime spark. */
+/** Palette shared with globals.css. */
 export const palette = {
-  aqua: '#5CE1E6',
-  mint: '#7EE8A8',
-  leaf: '#3FB950',
-  pearl: '#F4F6FF',
-  sky: '#CFE6FF',
-  forest: '#1C4424',
-  lime: '#C8F53A',
-  chrome: '#eef2f8',
-  lilac: '#B9A6FF',
+  moss: "#738B54",
+  sage: "#959D69",
+  olive: "#595F3E",
+  sand: "#C2B396",
+  cream: "#EDE8DC",
+  mist: "#DBDFD9",
+  ink: "#13180A",
+  accent: "#E0703A",
+  chrome: "#e9ece6",
 };
 
 /**
- * What changes with the flavour (green, or aqua via the Konami code): the jelly colour, and the studio (lights, the
- * fallback light panels, and which sky panorama the chrome reflects).
+ * Night shift: the blobs turn to deep velvet so the warm rim light and the glowing
+ * screens carry the scene. Scenes keep asking for palette.moss etc.
  */
-const FLAVORS = {
-  green: {
-    jelly: palette.mint,
-    sky: 'env',
-    room: { light: '#eaf6ea', dark: '#05130a' },
-    panels: { light: ['#c8f5d6', '#e6f9c0', '#ffffff'], dark: ['#5ce1e6', '#c8f53a', '#163a24'] },
-    hemi: { light: ['#f4fff4', '#cfeec0'], dark: ['#3f7a5a', '#040c06'] },
-    key: { light: '#ffffff', dark: '#d8ffe6' },
-    rim: { light: '#c8f5d6', dark: '#7ee8a8' },
-  },
-  aqua: {
-    jelly: palette.lilac,
-    sky: 'env-aqua',
-    room: { light: '#e8f1fb', dark: '#070b1e' },
-    panels: { light: ['#bdf3f5', '#ddd3ff', '#ffffff'], dark: ['#5ce1e6', '#b9a6ff', '#1a2350'] },
-    hemi: { light: ['#f2fbff', '#c9bcff'], dark: ['#4a5aa8', '#05060f'] },
-    key: { light: '#ffffff', dark: '#cdeeff' },
-    rim: { light: '#bdf3f5', dark: '#b49cff' },
-  },
-} satisfies Record<Flavor, unknown>;
+const night: Record<string, string> = {
+  [palette.moss]: "#3f6034",
+  [palette.sage]: "#5a7443",
+  [palette.olive]: "#2f3421",
+  [palette.sand]: "#6b5f47",
+  [palette.mist]: "#1a1e14",
+};
 
-export function useFlavorColors() {
-  return FLAVORS[useFlavor()];
+/** A palette colour as the current theme shows it. */
+export function useSwatch(color: string) {
+  return useTheme() === "dark" ? (night[color] ?? color) : color;
 }
 
 /** Window-level pointer, -1..1, shared by every view. Not React state. */
@@ -125,307 +113,95 @@ export function blobGeometry(seed: number, amount = 0.22, segments = 64) {
 }
 
 /** Segment counts per tier: the low tier roughly thirds the triangle count. */
-// export function useDetail() {
-//   return useQuality() === "low" ? { blob: 36, sphere: 28 } : { blob: 64, sphere: 48 };
-// }
-
-/** Segment counts per tier: the low tier roughly thirds the triangle count. */
 export function useDetail() {
-  return useQuality() === 'low'
-    ? { blob: 36, sphere: 28, liquid: 72 }
-    : { blob: 64, sphere: 48, liquid: 144 };
+  return useQuality() === "low" ? { blob: 36, sphere: 28 } : { blob: 64, sphere: 48 };
 }
 
-export type Finish = 'chrome' | 'glass' | 'jelly' | 'plastic' | 'glow';
-
-/**
- * A soap-bubble skin: nearly clear face-on, bright and rainbow-filmed at the rim.
- * Alpha comes from a fresnel term rather than `opacity`, so reflections stay at full strength.
- */
-const bubbleCache = new Map<string, THREE.MeshPhysicalMaterial>();
-export function bubbleMaterial(low: boolean, tint = '#ffffff') {
-  const key = `${low}|${tint}`;
-  const hit = bubbleCache.get(key);
-  if (hit) return hit;
-  const m = new THREE.MeshPhysicalMaterial({
-    color: tint,
-    metalness: 0,
-    roughness: 0.04,
-    transparent: true,
-    depthWrite: false,
-    envMapIntensity: 2.2,
-    ...(low
-      ? {}
-      : {
-          iridescence: 1,
-          iridescenceIOR: 1.33,
-          iridescenceThicknessRange: [180, 820] as [number, number],
-          clearcoat: 1,
-          clearcoatRoughness: 0.02,
-        }),
-  });
-  m.onBeforeCompile = (shader) => {
-    shader.fragmentShader = shader.fragmentShader.replace(
-      '#include <opaque_fragment>',
-      `#include <opaque_fragment>
-      float rim = pow(1.0 - clamp(abs(dot(normalize(normal), normalize(vViewPosition))), 0.0, 1.0), 3.2);
-      float glint = smoothstep(0.7, 1.1, max(gl_FragColor.r, max(gl_FragColor.g, gl_FragColor.b)));
-      gl_FragColor.a = clamp(0.03 + rim * 0.9 + glint * 0.85, 0.0, 1.0);`,
-    );
-  };
-  bubbleCache.set(key, m);
-  return m;
-}
-
-export function FinishMaterial({
-  finish,
-  color = palette.chrome,
-}: {
-  finish: Finish;
-  color?: string;
-}) {
-  const low = useQuality() === 'low';
-  if (finish === 'glass')
-    return (
-      <primitive
-        object={bubbleMaterial(low, color)}
-        attach='material'
-        dispose={null}
-      />
-    );
-  if (finish === 'glow')
-    return (
-      <meshStandardMaterial
-        color={color}
-        emissive={color}
-        emissiveIntensity={1.4}
-        toneMapped={false}
-      />
-    );
-  if (low) {
-    // Low tier: standard (not physical) shaders. No clearcoat or iridescence, the expensive
-    // parts on a phone GPU; chrome still reads because it is mostly the environment map.
-    if (finish === 'chrome')
-      return (
-        <meshStandardMaterial
-          color={palette.chrome}
-          metalness={1}
-          roughness={0.08}
-          envMapIntensity={1.3}
-        />
-      );
-    if (finish === 'jelly')
-      return (
-        <meshStandardMaterial
-          color={color}
-          roughness={0.15}
-          transparent
-          opacity={0.8}
-          envMapIntensity={1.2}
-        />
-      );
-    return (
-      <meshStandardMaterial
-        color={color}
-        roughness={0.25}
-        envMapIntensity={1.1}
-      />
-    );
+/** Fine random normals: gives the matte clay a flocked, felt-like grain. */
+let grain: THREE.DataTexture | null = null;
+export function grainTexture() {
+  if (grain) return grain;
+  const size = 256;
+  const data = new Uint8Array(size * size * 4);
+  const r = rng(42);
+  for (let i = 0; i < size * size; i++) {
+    data[i * 4] = 128 + (r() - 0.5) * 120;
+    data[i * 4 + 1] = 128 + (r() - 0.5) * 120;
+    data[i * 4 + 2] = 255;
+    data[i * 4 + 3] = 255;
   }
-  if (finish === 'chrome')
+  grain = new THREE.DataTexture(data, size, size);
+  grain.wrapS = grain.wrapT = THREE.RepeatWrapping;
+  grain.repeat.set(8, 8);
+  grain.needsUpdate = true;
+  return grain;
+}
+
+export type Finish = "flock" | "clay" | "chrome" | "glow";
+
+export function FinishMaterial({ finish, color }: { finish: Finish; color: string }) {
+  const quality = useQuality();
+  color = useSwatch(color);
+  const normalMap = useMemo(() => (finish === "flock" ? grainTexture() : null), [finish]);
+  if (quality === "low") {
+    // Low tier: one standard (not physical) shader per finish. No sheen, clearcoat,
+    // iridescence or normal map, which are the expensive parts on a phone GPU.
+    if (finish === "chrome") return <meshStandardMaterial color={palette.chrome} metalness={1} roughness={0.14} envMapIntensity={1.4} />;
+    if (finish === "glow") return <meshStandardMaterial color={color} emissive={color} emissiveIntensity={0.6} roughness={0.4} />;
+    return <meshStandardMaterial color={color} roughness={finish === "flock" ? 0.92 : 0.6} />;
+  }
+  if (finish === "chrome")
     return (
       <meshPhysicalMaterial
         color={palette.chrome}
         metalness={1}
-        roughness={0.05}
-        envMapIntensity={1.3}
-        iridescence={0.22}
-        iridescenceIOR={1.4}
+        roughness={0.12}
+        envMapIntensity={1.4}
       />
     );
-  if (finish === 'jelly')
+  if (finish === "glow")
+    return <meshStandardMaterial color={color} emissive={color} emissiveIntensity={0.6} roughness={0.4} />;
+  if (finish === "flock")
     return (
       <meshPhysicalMaterial
         color={color}
-        roughness={0.1}
-        transparent
-        opacity={0.74}
-        clearcoat={1}
-        clearcoatRoughness={0.04}
-        iridescence={0.55}
-        iridescenceIOR={1.3}
-        envMapIntensity={1.3}
+        roughness={0.95}
+        sheen={1}
+        sheenRoughness={0.55}
+        sheenColor={new THREE.Color(color).lerp(new THREE.Color("#ffffff"), 0.45)}
+        normalMap={normalMap}
+        normalScale={new THREE.Vector2(0.35, 0.35)}
       />
     );
-  return (
-    <meshPhysicalMaterial
-      color={color}
-      roughness={0.2}
-      clearcoat={1}
-      clearcoatRoughness={0.05}
-      envMapIntensity={1.1}
-    />
-  );
+  return <meshPhysicalMaterial color={color} roughness={0.7} clearcoat={0.25} clearcoatRoughness={0.6} />;
 }
-
-/* ------------------------------------------------------------ liquid chrome */
-
-const NOISE = /* glsl */ `
-vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
-vec4 mod289(vec4 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
-vec4 permute(vec4 x) { return mod289(((x * 34.0) + 10.0) * x); }
-vec4 taylorInvSqrt(vec4 r) { return 1.79284291400159 - 0.85373472095314 * r; }
-float snoise(vec3 v) {
-  const vec2 C = vec2(1.0 / 6.0, 1.0 / 3.0);
-  const vec4 D = vec4(0.0, 0.5, 1.0, 2.0);
-  vec3 i = floor(v + dot(v, C.yyy));
-  vec3 x0 = v - i + dot(i, C.xxx);
-  vec3 g = step(x0.yzx, x0.xyz);
-  vec3 l = 1.0 - g;
-  vec3 i1 = min(g.xyz, l.zxy);
-  vec3 i2 = max(g.xyz, l.zxy);
-  vec3 x1 = x0 - i1 + C.xxx;
-  vec3 x2 = x0 - i2 + C.yyy;
-  vec3 x3 = x0 - D.yyy;
-  i = mod289(i);
-  vec4 p = permute(permute(permute(i.z + vec4(0.0, i1.z, i2.z, 1.0)) + i.y + vec4(0.0, i1.y, i2.y, 1.0)) + i.x + vec4(0.0, i1.x, i2.x, 1.0));
-  float n_ = 0.142857142857;
-  vec3 ns = n_ * D.wyz - D.xzx;
-  vec4 j = p - 49.0 * floor(p * ns.z * ns.z);
-  vec4 x_ = floor(j * ns.z);
-  vec4 y_ = floor(j - 7.0 * x_);
-  vec4 x = x_ * ns.x + ns.yyyy;
-  vec4 y = y_ * ns.x + ns.yyyy;
-  vec4 h = 1.0 - abs(x) - abs(y);
-  vec4 b0 = vec4(x.xy, y.xy);
-  vec4 b1 = vec4(x.zw, y.zw);
-  vec4 s0 = floor(b0) * 2.0 + 1.0;
-  vec4 s1 = floor(b1) * 2.0 + 1.0;
-  vec4 sh = -step(h, vec4(0.0));
-  vec4 a0 = b0.xzyw + s0.xzyw * sh.xxyy;
-  vec4 a1 = b1.xzyw + s1.xzyw * sh.zzww;
-  vec3 p0 = vec3(a0.xy, h.x);
-  vec3 p1 = vec3(a0.zw, h.y);
-  vec3 p2 = vec3(a1.xy, h.z);
-  vec3 p3 = vec3(a1.zw, h.w);
-  vec4 norm = taylorInvSqrt(vec4(dot(p0, p0), dot(p1, p1), dot(p2, p2), dot(p3, p3)));
-  p0 *= norm.x; p1 *= norm.y; p2 *= norm.z; p3 *= norm.w;
-  vec4 m = max(0.5 - vec4(dot(x0, x0), dot(x1, x1), dot(x2, x2), dot(x3, x3)), 0.0);
-  m = m * m;
-  return 105.0 * dot(m * m, vec4(dot(p0, x0), dot(p1, x1), dot(p2, x2), dot(p3, x3)));
-}
-`;
-
-export type LiquidUniforms = {
-  uTime: { value: number };
-  /** Surface churn: rises briefly when the cursor moves fast. */
-  uAmp: { value: number };
-  /** Unit direction (object space) the surface reaches toward, and how far. */
-  uPull: { value: THREE.Vector3 };
-  uPullAmt: { value: number };
-};
 
 /**
- * Liquid metal: a unit sphere whose surface is pushed around by moving noise on the GPU,
- * with a bulge that reaches toward `uPull`. Normals are rebuilt per vertex from two
- * neighbouring samples, so the chrome reflections ripple with the shape.
- */
-export function makeLiquidChrome(low: boolean, tint = palette.chrome) {
-  const uniforms: LiquidUniforms = {
-    uTime: { value: 0 },
-    uAmp: { value: 0.1 },
-    uPull: { value: new THREE.Vector3(0, 0, 1) },
-    uPullAmt: { value: 0 },
-  };
-  const material = low
-    ? new THREE.MeshStandardMaterial({
-        color: tint,
-        metalness: 1,
-        roughness: 0.12,
-        envMapIntensity: 1.3,
-      })
-    : new THREE.MeshPhysicalMaterial({
-        color: tint,
-        metalness: 1,
-        roughness: 0.11,
-        envMapIntensity: 1.35,
-        iridescence: 0.35,
-        iridescenceIOR: 1.45,
-      });
-  // Scenes reach the uniforms through the mesh's material, never through React state.
-  material.userData.uniforms = uniforms;
-  material.onBeforeCompile = (shader) => {
-    Object.assign(shader.uniforms, uniforms);
-    shader.vertexShader = shader.vertexShader
-      .replace(
-        '#include <common>',
-        `#include <common>
-        uniform float uTime; uniform float uAmp; uniform vec3 uPull; uniform float uPullAmt;
-        ${NOISE}
-        vec3 liquid(vec3 dir) {
-          float n = snoise(dir * 1.05 + vec3(uTime * 0.28, uTime * 0.21, -uTime * 0.17)) * uAmp
-                  + snoise(dir * 2.1 - vec3(uTime * 0.33)) * uAmp * 0.16;
-          n += pow(max(0.0, dot(dir, uPull)), 5.0) * uPullAmt;
-          return dir * (1.0 + n);
-        }`,
-      )
-      .replace(
-        '#include <beginnormal_vertex>',
-        `vec3 lqDir = normalize(position);
-        vec3 lqT = normalize(cross(lqDir, abs(lqDir.y) < 0.99 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0)));
-        vec3 lqB = cross(lqDir, lqT);
-        vec3 lqP = liquid(lqDir);
-        vec3 lqP1 = liquid(normalize(lqDir + lqT * 0.02));
-        vec3 lqP2 = liquid(normalize(lqDir + lqB * 0.02));
-        vec3 objectNormal = normalize(cross(lqP1 - lqP, lqP2 - lqP));
-        if (dot(objectNormal, lqDir) < 0.0) objectNormal = -objectNormal;
-        #ifdef USE_TANGENT
-          vec3 objectTangent = vec3(tangent.xyz);
-        #endif`,
-      )
-      .replace('#include <begin_vertex>', 'vec3 transformed = lqP;');
-  };
-  return { material, uniforms };
-}
-
-/* -------------------------------------------------------------- environment */
-
-/**
- * The fallback room chrome reflects until the generated sky panorama arrives (and if it
- * never does): soft mint and aqua light panels. Built once per theme, shared by every view.
+ * The environment map chrome and gloss reflect: soft light panels in a light room.
+ * Built once per theme and shared by every view (it used to be rendered per view).
  */
 const envCache = new Map<string, THREE.Texture>();
-function proceduralEnvironment(gl: THREE.WebGLRenderer, dark: boolean, flavor: Flavor) {
-  const key = `${flavor}-${dark ? 'dark' : 'light'}`;
-  const f = FLAVORS[flavor];
-  const tone = dark ? 'dark' : 'light';
+function sharedEnvironment(gl: THREE.WebGLRenderer, dark: boolean) {
+  const key = dark ? "dark" : "light";
   const hit = envCache.get(key);
   if (hit) return hit;
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(f.room[tone]);
-  const panel = (
-    color: string,
-    intensity: number,
-    pos: [number, number, number],
-    scale: [number, number],
-  ) => {
+  scene.background = new THREE.Color(dark ? "#15180f" : "#e9e6dc");
+  const panel = (geometry: THREE.BufferGeometry, color: string, intensity: number, pos: [number, number, number], scale: [number, number]) => {
     const mesh = new THREE.Mesh(
-      new THREE.PlaneGeometry(1, 1),
-      new THREE.MeshBasicMaterial({
-        color: new THREE.Color(color).multiplyScalar(intensity),
-        side: THREE.DoubleSide,
-        toneMapped: false,
-      }),
+      geometry,
+      new THREE.MeshBasicMaterial({ color: new THREE.Color(color).multiplyScalar(intensity), side: THREE.DoubleSide, toneMapped: false }),
     );
     mesh.position.set(...pos);
     mesh.scale.set(scale[0], scale[1], 1);
     mesh.lookAt(0, 0, 0);
     scene.add(mesh);
   };
-  panel('#ffffff', dark ? 0.9 : 3, [0, 4, 3], [10, 3]);
-  panel(f.panels[tone][0], 1.6, [-5, 0, 2], [6, 3]);
-  panel(f.panels[tone][1], dark ? 1.8 : 1.5, [5, -1, 2], [6, 2]);
-  panel(f.panels[tone][2], 1, [0, -4, 1], [10, 3]);
+  const plane = new THREE.PlaneGeometry(1, 1);
+  panel(plane, dark ? "#ffd2b0" : "#ffffff", dark ? 1.2 : 3, [0, 4, 3], [10, 3]);
+  panel(plane, dark ? "#8a6a4a" : "#dfe8c8", dark ? 0.9 : 1.6, [-5, 0, 2], [6, 3]);
+  panel(plane, dark ? "#f08a50" : "#f3c9a8", dark ? 1.6 : 1.4, [5, -1, 2], [6, 2]);
+  panel(new THREE.RingGeometry(0.5, 1, 48), dark ? "#9fb0d0" : "#ffffff", dark ? 0.6 : 1.5, [0, -3, 4], [3, 3]);
   const pmrem = new THREE.PMREMGenerator(gl);
   const texture = pmrem.fromScene(scene, 0.02).texture;
   pmrem.dispose();
@@ -433,57 +209,21 @@ function proceduralEnvironment(gl: THREE.WebGLRenderer, dark: boolean, flavor: F
   return texture;
 }
 
-/** The generated sky panoramas, loaded once per theme and shared by every view. */
-const skyCache = new Map<string, Promise<THREE.Texture>>();
-function skyEnvironment(gl: THREE.WebGLRenderer, dark: boolean, flavor: Flavor) {
-  const key = `${FLAVORS[flavor].sky}-${dark ? "dark" : "light"}`;
-  let hit = skyCache.get(key);
-  if (!hit) {
-    hit = new THREE.TextureLoader().loadAsync(`/textures/${key}.jpg`).then((t) => {
-      t.mapping = THREE.EquirectangularReflectionMapping;
-      t.colorSpace = THREE.SRGBColorSpace;
-      const pmrem = new THREE.PMREMGenerator(gl);
-      const env = pmrem.fromEquirectangular(t).texture;
-      pmrem.dispose();
-      t.dispose();
-      return env;
-    });
-    skyCache.set(key, hit);
-  }
-  return hit;
-}
-
 /**
- * Daylight sky studio: cool key, a bounce in the flavour colour, and the sky panorama in
- * every reflection. Night shift turns the room dark with coloured light strips.
+ * Soft daylight studio: warm key, bounce, and the shared environment. Night shift dims
+ * the room and turns the key into a warm lamp with a cool rim from behind.
  */
 export function Studio() {
   const dark = useTheme() === "dark";
-  const flavor = useFlavor();
-  const f = FLAVORS[flavor];
-  const tone = dark ? "dark" : "light";
   const gl = useThree((s) => s.gl);
-  const fallback = useMemo(() => proceduralEnvironment(gl, dark, flavor), [gl, dark, flavor]);
-  const want = `${flavor}-${tone}`;
-  const [sky, setSky] = useState<{ key: string; tex: THREE.Texture } | null>(null);
-  useEffect(() => {
-    let live = true;
-    skyEnvironment(gl, dark, flavor).then(
-      (tex) => live && setSky({ key: `${flavor}-${dark ? "dark" : "light"}`, tex }),
-      () => {},
-    );
-    return () => {
-      live = false;
-    };
-  }, [gl, dark, flavor]);
-  const environment = sky && sky.key === want ? sky.tex : fallback;
+  const environment = useMemo(() => sharedEnvironment(gl, dark), [gl, dark]);
   return (
     <>
-      <hemisphereLight args={[f.hemi[tone][0], f.hemi[tone][1], dark ? 0.7 : 1.1]} />
-      <directionalLight position={[4, 6, 5]} intensity={dark ? 1.4 : 2.1} color={f.key[tone]} />
-      <directionalLight position={[-5, 2, -3]} intensity={dark ? 2.2 : 0.9} color={f.rim[tone]} />
+      <hemisphereLight args={dark ? ["#6b6a5a", "#0b0d08", 0.55] : ["#fffaf0", "#9aa77a", 1.1]} />
+      <directionalLight position={[4, 6, 5]} intensity={dark ? 2.3 : 2.2} color={dark ? "#ffd0a8" : "#fff4e2"} />
+      <directionalLight position={[-5, 2, -3]} intensity={dark ? 1.6 : 0.7} color={dark ? "#9fb4e0" : "#cfe0b0"} />
       {/* shared across views, so never disposed when one view unmounts */}
-      <primitive object={environment} attach='environment' dispose={null} />
+      <primitive object={environment} attach="environment" dispose={null} />
     </>
   );
 }

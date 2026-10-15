@@ -11,12 +11,10 @@ import {
 import type { ThreeEvent } from "@react-three/fiber";
 import * as THREE from "three";
 import { useFrame, useThree } from "@react-three/fiber";
-import { useQuality } from "@/lib/quality";
-import { useFlavor, useTheme } from "@/lib/theme";
+import { useTheme } from "@/lib/theme";
 import { PerspectiveCamera, useTexture, View } from "@react-three/drei";
 import type { Project } from "@/lib/content";
 import {
-  FinishMaterial,
   Studio,
   clamp01,
   easeInOut,
@@ -26,16 +24,16 @@ import {
   pinsActive,
   pointer,
   sectionProgress,
-  useFlavorColors,
 } from './kit';
 import {
-  Bubbles,
+  Blob,
   Laptop,
-  LiquidChrome,
   LogoBadge,
   logoParts,
   Orbit,
+  Planet,
   Phone,
+  Pod,
   Robot,
   Sphere,
   Tablet,
@@ -86,9 +84,8 @@ function Portrait() {
   useEffect(() => {
     document.documentElement.dataset.portrait = "3d";
   }, []);
-  // Night shift: cooled to the night sky, a touch dimmer than the screens.
+  // Night shift: lit by the warm lamp rather than daylight, a touch dimmer than the screens.
   const dark = useTheme() === "dark";
-  const aqua = useFlavor() === "aqua";
   const img = texture.image as { width: number; height: number };
   const h = 4.5;
   return (
@@ -99,7 +96,7 @@ function Portrait() {
           the empty pixels around the cut-out so they never hide the orbit ring. */}
       <meshBasicMaterial
         map={texture}
-        color={dark ? (aqua ? "#cdd6f2" : "#d0e8d6") : "#ffffff"}
+        color={dark ? "#d8c6b0" : "#ffffff"}
         alphaMap={portraitFade}
         transparent
         alphaTest={0.02}
@@ -115,6 +112,7 @@ function HeroScene() {
   const mid = useRef<THREE.Group>(null);
   const front = useRef<THREE.Group>(null);
   const root = useRef<THREE.Group>(null);
+  const pod = useRef<THREE.Group>(null);
   const size = useThree((s) => s.size);
   // Highest the top of the head may sit (world y, before the root scale) without covering
   // the "See my work" button. Short phone screens (Safari with its toolbars) need it.
@@ -149,6 +147,7 @@ function HeroScene() {
 
   useFrame((state, delta) => {
     const dt = Math.min(delta, 1 / 30);
+    const time = state.clock.elapsedTime;
     const rootScale = Math.min(1, (size.width / size.height) * 0.9 + 0.2);
     // The hero leaves over one viewport of scroll.
     const out = motion.reduced ? 0 : clamp01(window.scrollY / window.innerHeight);
@@ -175,24 +174,29 @@ function HeroScene() {
     }
     if (mid.current && !motion.reduced) mid.current.rotation.y = damp(mid.current.rotation.y, pointer.sx * 0.08, dt);
 
+    // The pod lifts off the horizon behind the portrait and drifts up and out, on a loop.
+    const pd = pod.current;
+    if (pd) {
+      // First lift-off comes a few seconds in, not during the intro.
+      const cycle = motion.reduced ? 0.15 : time < 6 ? 0.99 : ((time - 6) % 22) / 22;
+      const fly = easeInOut(clamp01(cycle / 0.6));
+      pd.position.set(lerp(1.1, 4.8, fly), lerp(-1.25, 1.35, fly) + Math.sin(time * 2) * 0.03, -4.5);
+      pd.rotation.set(0.15, time * 0.6, lerp(0, -0.25, fly));
+      pd.visible = cycle < 0.62;
+    }
     // The blobs lean in toward the camera as the visitor leaves; the portrait holds its
     // size so its faded bottom never crosses the edge of the hero's 3D box.
     if (root.current) root.current.scale.setScalar(rootScale);
     for (const g of [back.current, front.current]) if (g) g.position.z = damp(g.position.z, out * 1.6, dt, 8);
   });
 
-  // Four planes: far bubbles and the big drop of liquid chrome, the portrait inside its
-  // chrome orbit, then a smaller chrome drop and a few bubbles in front of everything.
-  // The pieces keep clear of the title band and the pitch card.
+  // Distilled: one planet per side and the orbit ring. The portrait sits below the
+  // title so the full job title reads; blobs keep clear of the title band and the side cards.
   return (
     <group ref={root}>
       <group ref={back}>
-        {/* The canvas paints over the page, so bubbles stay below the title and button. */}
-        <Bubbles count={16} box={[11, 3.6, 2]} center={[0, -1.5, -3.4]} size={[0.07, 0.3]} seed={2} delay={0.6} />
-        <LiquidChrome position={[3.55, 0.15, -2.6]} scale={0.92} delay={0.45} />
-        <Sphere position={[-3.55, -0.55, -2.2]} scale={0.62} finish="glass" delay={0.35} />
-        <Sphere position={[-2.85, 0.65, -2.8]} scale={0.17} delay={0.55} />
-        <Sphere position={[-2.6, -1.45, -1.6]} scale={0.13} finish="plastic" color={palette.lime} delay={0.7} />
+        <Planet seed={1} position={[-3.6, -0.55, -2.4]} scale={0.6} color={palette.moss} stripe={palette.sage} ring={palette.sand} tilt={0.35} delay={0.35} />
+        <Planet seed={2} position={[3.7, -0.2, -2.8]} scale={0.7} color={palette.sage} stripe={palette.cream} moon={palette.accent} tilt={-0.3} delay={0.5} />
       </group>
       <group ref={mid}>
         <Suspense fallback={null}>
@@ -200,10 +204,12 @@ function HeroScene() {
         </Suspense>
         <Orbit radius={1.9} position={[0, -0.3, 0]} tilt={[1.3, 0.06, 0.3]} speed={0.35} delay={0.9} />
       </group>
+      <group ref={pod} scale={0.32}>
+        <Pod />
+      </group>
       <group ref={front}>
         {/* covers the photo's own crop on the right arm */}
-        <LiquidChrome position={[1.65, -2.6, 1.2]} scale={0.5} reach={0.22} calm={0.12} delay={0.55} />
-        <Bubbles count={6} box={[8, 2.2, 1]} center={[0, -1.7, 2.2]} size={[0.05, 0.13]} seed={5} rise={0.26} delay={0.9} />
+        <Planet seed={3} position={[1.65, -2.6, 1.2]} scale={0.56} color={palette.sand} stripe={palette.cream} tilt={0.2} delay={0.55} />
       </group>
     </group>
   );
@@ -281,9 +287,8 @@ function FeaturedScene({ spot, screen }: { spot: RefObject<HTMLElement | null>; 
     <>
       {/* The client's logo assembles itself as the tablet swings round, then floats top-left. */}
       <LogoBadge assemble={() => span(progress.current, 0.03, 0.24)} position={[1.3, 0.85, 0.9]} scale={1.05} />
-      <LiquidChrome position={[2.3, 0.4, -2.4]} scale={0.8} reach={0.25} />
-      <Sphere position={[-1.7, -1.5, 0.4]} scale={0.42} finish="glass" />
-      <Bubbles count={8} box={[7, 4.5, 2]} center={[0.5, 0, -1.2]} size={[0.05, 0.18]} seed={7} />
+      <Blob seed={7} position={[2.3, 0.4, -2.4]} scale={0.95} color={palette.sage} />
+      <Blob seed={8} position={[-1.7, -1.5, 0.4]} scale={0.42} color={palette.moss} />
       <group ref={tablet}>
         <Suspense fallback={null}>
           <Tablet src={screen} scroll={scroll} />
@@ -292,7 +297,7 @@ function FeaturedScene({ spot, screen }: { spot: RefObject<HTMLElement | null>; 
       <group ref={orbit}>
         <Orbit radius={2.35} position={[-0.3, 0.25, 0]} tilt={[1.35, 0, -0.25]} speed={0.2} phase={2} />
       </group>
-      <group ref={robot} position={[7.5, -1.85, 1]} rotation-y={-1.2} scale={0.5}>
+      <group ref={robot} position={[7.5, -1.85, 1]} rotation-y={-1.2} scale={0.56}>
         <Robot drive={drive} />
       </group>
     </>
@@ -376,9 +381,8 @@ function DeviceScene({ project, spot }: { project: Project; spot: RefObject<HTML
   const scroll = () => screenScroll.current;
   return (
     <>
-      <Sphere position={[1.6, 1, -2.6]} scale={0.6} finish="glass" />
-      <Sphere position={[-1.9, -0.9, -1.6]} scale={0.22} />
-      <Sphere position={[1.9, -1.1, -1]} scale={0.1} finish="plastic" color={palette.lime} />
+      <Blob seed={project.id.length * 3} position={[1.6, 1, -2.6]} scale={0.6} color={palette.sage} />
+      <Sphere position={[-1.9, -0.9, -1.6]} scale={0.26} color={palette.sand} />
       <group ref={rig}>
         <Suspense fallback={null}>
           {project.device === "phones" && (
@@ -422,13 +426,13 @@ function DeviceScene({ project, spot }: { project: Project; spot: RefObject<HTML
 /* --------------------------------------------------------------- closing */
 
 const MOONS = [
-  { finish: "glass", color: undefined, size: 0.26, from: [-6, 3, -2] },
-  { finish: "chrome", color: undefined, size: 0.14, from: [6, 2.5, 1] },
-  { finish: "jelly", color: "flavor", size: 0.16, from: [-5, -3, 2] },
-  { finish: "glass", color: undefined, size: 0.2, from: [5.5, -2.5, -1] },
-  { finish: "plastic", color: palette.lime, size: 0.1, from: [0, 4.5, 0] },
-  { finish: "jelly", color: palette.aqua, size: 0.15, from: [-6.5, 0, 1] },
-  { finish: "chrome", color: undefined, size: 0.18, from: [6.5, 0.5, -2] },
+  { seed: 21, color: palette.sage, size: 0.22, from: [-6, 3, -2] },
+  { seed: 22, color: palette.sand, size: 0.16, from: [6, 2.5, 1] },
+  { seed: 23, color: palette.cream, size: 0.14, from: [-5, -3, 2] },
+  { seed: 24, color: palette.moss, size: 0.2, from: [5.5, -2.5, -1] },
+  { seed: 25, color: palette.accent, size: 0.12, from: [0, 4.5, 0] },
+  { seed: 26, color: palette.sage, size: 0.15, from: [-6.5, 0, 1] },
+  { seed: 27, color: palette.cream, size: 0.18, from: [6.5, 0.5, -2] },
 ] as const;
 
 /** What the closing robot does when clicked; `n` changes on every poke so the scene notices. */
@@ -451,7 +455,6 @@ function ClosingScene({
 }) {
   const planet = useRef<THREE.Group>(null);
   const moons = useRef<(THREE.Group | null)[]>([]);
-  const { jelly } = useFlavorColors();
   const gather = useRef(0);
   const robot = useRef<THREE.Group>(null);
   const robotDrive = useRef<RobotDrive>({
@@ -539,7 +542,7 @@ function ClosingScene({
         const b = bubbleRef.current;
         const box = spot.current?.getBoundingClientRect();
         if (b && box) {
-          h.localToWorld(head.set(0, 3.6, 0)).project(state.camera);
+          h.localToWorld(head.set(0, 3.1, 0)).project(state.camera);
           b.style.transform = `translate(${((head.x + 1) / 2) * box.width}px, ${((1 - head.y) / 2) * box.height}px)`;
         }
       }
@@ -567,7 +570,14 @@ function ClosingScene({
   return (
     <>
       <group ref={planet}>
-        <LiquidChrome position={[0, 0, 0]} scale={1.05} reach={0.3} calm={0.12} />
+        <Blob
+          seed={11}
+          position={[0, 0, 0]}
+          scale={1.1}
+          color={palette.moss}
+          amount={0.1}
+          speed={0.5}
+        />
         <Orbit radius={1.85} tilt={[1.3, 0, 0.25]} speed={0.3} />
       </group>
       <group
@@ -587,8 +597,14 @@ function ClosingScene({
         </group>
       </group>
       {MOONS.map((m, i) => (
-        <group key={i} ref={(el) => void (moons.current[i] = el)}>
-          <Sphere position={[0, 0, 0]} scale={m.size} finish={m.finish} color={m.color === "flavor" ? jelly : m.color} />
+        <group key={m.seed} ref={(el) => void (moons.current[i] = el)}>
+          <Blob
+            seed={m.seed}
+            position={[0, 0, 0]}
+            scale={m.size}
+            color={m.color}
+            amount={0.18}
+          />
         </group>
       ))}
     </>
@@ -599,38 +615,11 @@ function ClosingScene({
 
 export type BuilderCommand = { type: "scatter" | "build"; n: number };
 
-/** How close (logo units) a piece must land to its spot to click in. */
-const SNAP = 0.2;
-/** Logo scale on the board: it stands 2.2 world units tall. */
-const BOARD = 2.2;
-
-// Logo pixels (722 x 1134, y down) to logo units, the same mapping as the badge geometry.
-const logoPx = (x: number, y: number) => new THREE.Vector3((x - 361) / 1134, -(y - 567) / 1134, 0);
+const SNAP = 0.2; // how close (badge units) a piece must land to click into place
 
 /**
- * Where each piece moves from once the bot is alive, in logo pixels: the antenna wobbles
- * on its base, the head tilts on its neck, the arms swing at the shoulders, the star spins
- * on its own centre and the point bobs. Order matches logoParts().
- */
-const LOGO_PIVOTS = [
-  [358, 212], // antenna
-  [358, 438], // head
-  [285, 530], // left arm
-  [435, 530], // right arm
-  null, // star: its own centre
-  [358, 830], // point
-] as const;
-
-/** The head's eye holes and the antenna ball, in logo pixels. */
-const LOGO_EYES = [[291, 313], [433, 313]] as const;
-const LOGO_BULB = [358, 40] as const;
-
-/**
- * The peak. The RoboStars logo (the robot I teach under) lies in six pieces around its own
- * faint outline. Drag each piece home and it clicks in with a bounce. When the last one
- * lands the logo boots: a chrome shockwave, its eyes flicker on in the empty sockets, the
- * antenna bulb lights, bubbles burst out, and it hops pumping its arms, spins its star,
- * waves, and follows the cursor from then on. Click it to make it hop and spin.
+ * The RoboStars logo in pieces on a table. Drag each piece onto its outline; within
+ * SNAP it clicks home. All six placed: a victory spin and a sparkle burst.
  */
 function BuilderScene({
   command,
@@ -641,97 +630,43 @@ function BuilderScene({
   interactive: boolean;
   onProgress: (placed: number) => void;
 }) {
-  const low = useQuality() === "low";
-  const { jelly } = useFlavorColors();
-  // Each piece re-centred on itself, so it turns about its own middle while dragged.
-  const pieces = useMemo(
-    () =>
-      logoParts().map((part, i) => {
-        const geo = part.geo.clone();
-        geo.computeBoundingBox();
-        const home = geo.boundingBox!.getCenter(new THREE.Vector3());
-        geo.translate(-home.x, -home.y, -home.z);
-        const p = LOGO_PIVOTS[i];
-        const pivot = p ? logoPx(p[0], p[1]).sub(home).setZ(0) : new THREE.Vector3();
-        return { geo, home, pivot, color: part.color, star: !!part.star };
-      }),
-    [],
-  );
-  useEffect(() => () => pieces.forEach((p) => p.geo.dispose()), [pieces]);
-  const homes = useMemo(() => pieces.map((p) => p.home), [pieces]);
-  // Glossy candy plastic in the brand blue and orange: the logo stays the logo.
-  const mats = useMemo(() => {
-    const make = (color: string) =>
-      low
-        ? new THREE.MeshStandardMaterial({ color, roughness: 0.18, envMapIntensity: 1.1 })
-        : new THREE.MeshPhysicalMaterial({ color, roughness: 0.12, clearcoat: 1, clearcoatRoughness: 0.04, iridescence: 0.25, envMapIntensity: 1.2 });
-    const cache = new Map<string, THREE.Material>();
-    return pieces.map((p) => cache.get(p.color) ?? cache.set(p.color, make(p.color)).get(p.color)!);
-  }, [pieces, low]);
-  useEffect(() => () => new Set(mats).forEach((m) => m.dispose()), [mats]);
-
+  const parts = useMemo(() => logoParts(), []);
   const board = useRef<THREE.Group>(null);
-  const live = useRef<THREE.Group>(null);
-  const parts = useRef<(THREE.Group | null)[]>([]);
-  const pivots = useRef<(THREE.Group | null)[]>([]);
-  const ghosts = useRef<(THREE.Mesh | null)[]>([]);
-  const eyes = useRef<(THREE.Mesh | null)[]>([]);
-  const bulb = useRef<THREE.Mesh>(null);
-  const wave = useRef<THREE.Mesh>(null);
-  const snapRing = useRef<THREE.Mesh>(null);
-  const burst = useRef<THREE.Group>(null);
+  const meshes = useRef<(THREE.Mesh | null)[]>([]);
+  const sparkles = useRef<THREE.Group>(null);
   const size = useThree((s) => s.size);
-  const clock = useThree((s) => s.clock);
   const game = useRef({
-    pos: homes.map((h) => h.clone()),
-    rot: homes.map(() => 0),
-    placed: homes.map(() => false),
-    snapAt: homes.map(() => -10),
-    lastSnap: -1,
+    pos: parts.map(() => new THREE.Vector3()),
+    rot: parts.map(() => 0),
+    placed: parts.map(() => false),
     dragging: -1,
     grab: new THREE.Vector3(),
     won: -10,
-    poked: -10,
     reported: -1,
     touched: 0,
     /** Where each piece is actually drawn (includes the idle-hint nudge). */
-    vis: homes.map(() => new THREE.Vector3()),
+    vis: parts.map(() => new THREE.Vector3()),
   });
-  const scratch = useMemo(
-    () => ({ plane: new THREE.Plane(new THREE.Vector3(0, 0, 1), 0), hit: new THREE.Vector3(), tmp: new THREE.Vector3() }),
-    [],
-  );
+  const scratch = useMemo(() => ({ plane: new THREE.Plane(new THREE.Vector3(0, 0, 1), 0), hit: new THREE.Vector3() }), []);
 
-  // Three pieces either side of the outline, top to bottom, inside the visible box.
+  // Scatter across the table, away from the outline in the middle.
   const scatter = () => {
     const g = game.current;
-    // Half the visible width at the board (camera 5, fov 30), in logo units.
-    const half = (5 * Math.tan(THREE.MathUtils.degToRad(15)) * size.width) / size.height / BOARD;
-    const lo = 0.5, hi = Math.max(lo + 0.02, half - 0.22);
-    // The head goes right: the progress label sits top-left.
-    const side = [-1, 1, 1, -1, 1, -1];
-    const rows = [0.18, 0.3, 0.0, -0.08, -0.3, -0.34];
-    homes.forEach((_, i) => {
-      g.pos[i].set(side[i] * (lo + Math.random() * (hi - lo)), rows[i] + (Math.random() - 0.5) * 0.08, 0);
-      g.rot[i] = (Math.random() - 0.5) * 1.4;
+    // Horizontal room in board units (board scale 2.2, camera at 5, fov 30).
+    const half = Math.max(0.55, ((5 * Math.tan(THREE.MathUtils.degToRad(15)) * size.width) / size.height) / 2.2 - 0.3);
+    parts.forEach((_, i) => {
+      const side = i % 2 === 0 ? -1 : 1;
+      g.pos[i].set(side * (0.45 + Math.random() * Math.max(0.05, half - 0.45)), (Math.random() - 0.5) * 0.35, 0);
+      g.rot[i] = (Math.random() - 0.5) * 1.6;
       g.placed[i] = false;
     });
     g.won = -10;
-    g.lastSnap = -1;
   };
 
   useEffect(() => {
     const g = game.current;
-    if (command.type === "build") {
-      // Let the pieces fly home one after another rather than all at once.
-      homes.forEach((_, i) => window.setTimeout(() => {
-        if (!g.placed[i]) {
-          g.placed[i] = true;
-          g.snapAt[i] = performance.now() / 1000;
-          g.lastSnap = i;
-        }
-      }, motion.reduced ? 0 : i * 140));
-    } else scatter();
+    if (command.type === "build") g.placed = g.placed.map(() => true);
+    else scatter();
     // `scatter` reads layout at call time; re-running on resize would reshuffle a game in progress.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [command.n]);
@@ -740,149 +675,77 @@ function BuilderScene({
     const g = game.current;
     const dt = Math.min(delta, 1 / 30);
     const t = state.clock.elapsedTime;
-    const now = performance.now() / 1000;
-    const since = g.won < 0 ? -1 : t - g.won;
-    const awake = since >= 0;
-    const still = motion.reduced;
-
-    homes.forEach((home, i) => {
-      const m = parts.current[i];
+    parts.forEach((_, i) => {
+      const m = meshes.current[i];
       if (!m) return;
       if (g.placed[i]) {
         // Glide home and square up.
-        const k = still ? 1 : 1 - Math.exp(-dt * 14);
-        g.pos[i].lerp(home, k);
+        const k = motion.reduced ? 1 : 1 - Math.exp(-dt * 12);
+        g.pos[i].lerp(new THREE.Vector3(), k);
         g.rot[i] += (0 - g.rot[i]) * k;
       }
-      const floating = !g.placed[i] && g.dragging !== i && !still;
+      const floating = !g.placed[i] && g.dragging !== i && !motion.reduced;
       // Idle hint: after a few quiet seconds, the first loose piece drifts part-way toward
-      // its spot and back, showing what to do without a word.
+      // its slot and back, showing what to do without a word.
       const hinting = floating && i === g.placed.indexOf(false) && performance.now() - g.touched > 3500;
       const nudge = hinting ? 0.35 * (0.5 - 0.5 * Math.cos(t * 2.4)) : 0;
-      scratch.tmp.copy(g.pos[i]).lerp(home, nudge);
-      m.position.set(scratch.tmp.x, scratch.tmp.y + (floating ? Math.sin(t * 1.5 + i) * 0.015 : 0), g.dragging === i ? 0.25 : 0);
+      m.position.set(
+        g.pos[i].x * (1 - nudge),
+        g.pos[i].y * (1 - nudge) + (floating ? Math.sin(t * 1.5 + i) * 0.02 : 0),
+        g.dragging === i ? 0.25 : 0,
+      );
       g.vis[i].set(m.position.x, m.position.y, 0);
-      m.rotation.set(floating ? Math.sin(t * 0.9 + i) * 0.2 : 0, floating ? Math.sin(t * 0.7 + i * 2) * 0.4 : 0, g.rot[i]);
-      // A snapped piece pops: a quick squash-and-stretch as it clicks in.
-      const s = clamp01((now - g.snapAt[i]) / 0.4);
-      const popScale = s < 1 && !still ? 1 + Math.sin(Math.PI * s) * 0.18 : 1;
-      m.userData.base = damp(m.userData.base ?? 1, g.dragging === i ? 1.1 : 1, dt, 12);
-      m.scale.setScalar(m.userData.base * popScale);
-      // The outline under a piece goes once the piece is home.
-      const ghost = ghosts.current[i];
-      if (ghost) ghost.visible = !g.placed[i] || g.pos[i].distanceTo(home) > 0.02;
-
-      // Alive: each piece moves on its own joint.
-      const pv = pivots.current[i];
-      if (!pv) return;
-      if (!awake || still) {
-        pv.rotation.set(0, 0, 0);
-        return;
-      }
-      const cheer = since > 1.2 && since < 2.7 ? 1 : 0;
-      const poke = t - g.poked < 1 ? 1 : 0;
-      const up = Math.max(cheer, poke);
-      if (i === 0) {
-        // Antenna: a springy wobble that settles into a slow sway.
-        pv.rotation.z = Math.sin(t * 9) * 0.35 * Math.exp(-Math.max(0, since - 0.4) * 1.5) + Math.sin(t * 1.7) * 0.08;
-      } else if (i === 1) {
-        // Head: tilts toward the cursor.
-        pv.rotation.z = damp(pv.rotation.z, -pointer.sx * 0.18, dt, 5);
-      } else if (i === 2 || i === 3) {
-        // Arms swing outward at the shoulder (inward would hit the head): a pump for the
-        // cheer, then the right one waves; otherwise a lazy swing.
-        const dir = i === 2 ? 1 : -1;
-        const waving = i === 3 && since > 2.7 && since < 5.2 ? Math.sin(t * 10) * 0.22 + 0.25 : 0;
-        const idle = Math.sin(t * 1.3 + i) * 0.05;
-        pv.rotation.z = damp(pv.rotation.z, dir * (up * (0.25 + Math.sin(t * 12) * 0.15) + waving + idle), dt, 10);
-      } else if (i === 4) {
-        // Star: one full turn as it boots, then a gentle sway, so it always reads as a star.
-        pv.rotation.y = easeInOut(clamp01((since - 1.2) / 1.1)) * Math.PI * 2 + Math.sin(t * 1.2) * 0.3;
-      } else {
-        pv.position.y = pieces[i].pivot.y + Math.sin(t * 2.2) * 0.008;
-      }
+      m.rotation.set(0, 0, g.rot[i]);
+      const lift = g.dragging === i ? 1.08 : 1;
+      m.scale.setScalar(damp(m.scale.x, lift, dt, 12));
     });
 
-    // A ring of light where the latest piece clicked in.
-    const ring = snapRing.current;
-    if (ring) {
-      const i = g.lastSnap;
-      const k = i < 0 ? 1 : clamp01((now - g.snapAt[i]) / 0.5);
-      ring.visible = k < 1 && !still;
-      if (ring.visible) {
-        ring.position.copy(homes[i]).setZ(0.15);
-        ring.scale.setScalar(0.15 + easeOut(k) * 0.35);
-        (ring.material as THREE.MeshBasicMaterial).opacity = 1 - k;
-      }
+    // Dev-only: where each piece and its home are on screen (NDC), for the drag test harness.
+    if (process.env.NODE_ENV !== "production" && board.current) {
+      const cam = state.camera;
+      const ndc = (v: THREE.Vector3) => board.current!.localToWorld(v.clone()).project(cam);
+      // A point guaranteed to be on each piece (centroid of its first front-face triangle),
+      // turned by the piece's current rotation. Grab there, drop at the same point minus
+      // the piece's offset, and the piece lands home: what a person does by eye.
+      const onPiece = (i: number) => {
+        const a = parts[i].geo.attributes.position;
+        const c = new THREE.Vector3(
+          (a.getX(0) + a.getX(1) + a.getX(2)) / 3,
+          (a.getY(0) + a.getY(1) + a.getY(2)) / 3,
+          0,
+        );
+        return c.applyAxisAngle(new THREE.Vector3(0, 0, 1), g.rot[i]);
+      };
+      (window as unknown as { __builder: unknown }).__builder = {
+        pieces: g.vis.map((p, i) => ndc(p.clone().add(onPiece(i)))),
+        homes: parts.map((_, i) => ndc(onPiece(i))),
+        placed: [...g.placed],
+      };
     }
 
     const placed = g.placed.filter(Boolean).length;
     if (placed !== g.reported) {
       g.reported = placed;
-      if (placed === homes.length && g.won < 0) g.won = t;
+      if (placed === parts.length && g.won < 0) g.won = t;
       onProgress(placed);
     }
 
-    // Eyes flicker on in the empty sockets, then glow; the antenna bulb lights after them.
-    const power = !awake ? 0 : still ? 1 : clamp01((since - 0.35) / 0.9);
-    const flicker = power > 0 && power < 1 ? (Math.sin(t * 60) > 0.2 ? 1 : 0.15) : 1;
-    eyes.current.forEach((e) => {
-      if (!e) return;
-      e.visible = power > 0;
-      // A blink every few seconds once awake.
-      const blink = !still && power >= 1 && (t % 3.7) < 0.12 ? 0.1 : 1;
-      e.scale.set(1, blink, 0.35);
-      (e.material as THREE.MeshStandardMaterial).emissiveIntensity = 2.6 * power * flicker;
-    });
-    if (bulb.current) {
-      bulb.current.visible = power > 0;
-      (bulb.current.material as THREE.MeshBasicMaterial).opacity = power * (still ? 0.6 : 0.45 + Math.sin(t * 4) * 0.2);
+    // Victory: one full spin with a pop, and sparkles flying out.
+    const since = g.won < 0 ? -1 : t - g.won;
+    if (board.current) {
+      const k = since < 0 || motion.reduced ? 0 : clamp01(since / 1.4);
+      board.current.rotation.y = easeInOut(k) * Math.PI * 2;
+      board.current.scale.setScalar(1 + Math.sin(Math.PI * k) * 0.12);
     }
-
-    const lv = live.current;
-    if (lv) {
-      const hopAt = Math.max(g.won + 1.2, g.poked);
-      const u = (t - hopAt) / 0.55;
-      const hopping = !still && awake && u >= 0 && u < 1;
-      lv.position.y = (hopping ? Math.sin(Math.PI * u) * 0.09 : 0) + (awake && !still ? Math.sin(t * 1.4) * 0.012 : 0);
-      // A poke hop includes a full spin.
-      const spin = !still && g.poked > g.won && t - g.poked < 0.8 ? easeInOut(clamp01((t - g.poked) / 0.8)) * Math.PI * 2 : 0;
-      // Awake, it turns toward the cursor with its whole body.
-      const look = awake && since > 1 && !still;
-      lv.rotation.y = spin + (look ? damp(lv.rotation.y % (Math.PI * 2), pointer.sx * 0.45, dt, 3) : 0);
-      lv.rotation.x = look ? damp(lv.rotation.x, -pointer.sy * 0.2, dt, 3) : 0;
-    }
-
-    // The boot shockwave: a chrome ring racing outward from the star.
-    const w = wave.current;
-    if (w) {
-      const k = since < 0 ? 1 : clamp01((since - 0.3) / 0.9);
-      w.visible = k > 0 && k < 1 && !still;
-      w.scale.setScalar(0.2 + easeOut(k) * 2.2);
-      (w.material as THREE.MeshBasicMaterial).opacity = (1 - k) * 0.9;
-    }
-    // Bubbles burst out as it powers up.
-    const b = burst.current;
-    if (b) {
-      const k = since < 0 ? 1 : clamp01((since - 0.4) / 2.2);
-      b.visible = k > 0 && k < 1 && !still;
-      b.children.forEach((c, i) => {
-        const a = (i / b.children.length) * Math.PI * 2 + i;
-        const r = easeOut(k) * (0.7 + (i % 3) * 0.25);
-        c.position.set(Math.cos(a) * r, homes[4].y + Math.sin(a) * r * 0.8 + k * 0.5, 0.25 + (i % 2) * 0.12);
-        c.scale.setScalar((0.035 + (i % 4) * 0.015) * Math.sin(Math.PI * Math.min(1, k * 1.3)));
+    if (sparkles.current) {
+      const k = since < 0 ? 1 : clamp01(since / 1.6);
+      sparkles.current.visible = since >= 0 && k < 1 && !motion.reduced;
+      sparkles.current.children.forEach((c, i) => {
+        const a = (i / sparkles.current!.children.length) * Math.PI * 2;
+        const r = easeOut(k) * 1.4;
+        c.position.set(Math.cos(a) * r, Math.sin(a) * r, 0.3);
+        c.scale.setScalar((1 - k) * 0.06);
       });
-    }
-
-    // Dev-only: where each piece and its spot are on screen (NDC), for the drag test harness.
-    if (process.env.NODE_ENV !== "production" && board.current) {
-      const cam = state.camera;
-      const ndc = (v: THREE.Vector3) => board.current!.localToWorld(v.clone()).project(cam);
-      (window as unknown as { __builder: unknown }).__builder = {
-        pieces: g.vis.map((p) => ndc(p)),
-        homes: homes.map((h) => ndc(h)),
-        placed: [...g.placed],
-      };
     }
   });
 
@@ -892,107 +755,66 @@ function BuilderScene({
     return board.current.worldToLocal(scratch.hit.clone());
   };
 
-  const handlers = (i: number) => ({
-    onPointerDown: (e: ThreeEvent<PointerEvent>) => {
-      const g = game.current;
-      if (!interactive || g.dragging !== -1) return;
-      e.stopPropagation();
-      // Built and awake: a click is a poke.
-      if (g.won >= 0) {
-        g.poked = clock.elapsedTime;
-        return;
-      }
-      if (g.placed[i]) return;
-      const p = toBoard(e);
-      if (!p) return;
-      g.dragging = i;
-      g.touched = performance.now();
-      // Start from where the piece is drawn, so grabbing it mid-hint doesn't make it jump.
-      g.pos[i].copy(g.vis[i]);
-      g.grab.copy(p).sub(g.pos[i]);
-      (e.target as Element).setPointerCapture?.(e.pointerId);
-      document.body.style.cursor = "grabbing";
-    },
-    onPointerMove: (e: ThreeEvent<PointerEvent>) => {
-      const g = game.current;
-      if (g.dragging !== i) return;
-      const p = toBoard(e);
-      if (p) g.pos[i].copy(p.sub(g.grab)).setZ(0);
-    },
-    onPointerUp: (e: ThreeEvent<PointerEvent>) => {
-      const g = game.current;
-      if (g.dragging !== i) return;
-      g.dragging = -1;
-      (e.target as Element).releasePointerCapture?.(e.pointerId);
-      document.body.style.cursor = "";
-      if (g.pos[i].distanceTo(homes[i]) < SNAP) {
-        g.placed[i] = true;
-        g.snapAt[i] = performance.now() / 1000;
-        g.lastSnap = i;
-      }
-    },
-    onPointerOver: () => {
-      const g = game.current;
-      if (g.dragging === -1 && (!g.placed[i] || g.won >= 0)) document.body.style.cursor = g.won >= 0 ? "pointer" : "grab";
-    },
-    onPointerOut: () => {
-      if (game.current.dragging === -1) document.body.style.cursor = "";
-    },
-  });
-
-  const eyeAt = LOGO_EYES.map(([x, y]) => logoPx(x, y).sub(pieces[1].home).sub(pieces[1].pivot));
-  const bulbAt = logoPx(...LOGO_BULB).sub(pieces[0].home).sub(pieces[0].pivot);
+  const onDown = (i: number) => (e: ThreeEvent<PointerEvent>) => {
+    const g = game.current;
+    if (!interactive || g.placed[i] || g.dragging !== -1) return;
+    e.stopPropagation();
+    const p = toBoard(e);
+    if (!p) return;
+    g.dragging = i;
+    g.touched = performance.now();
+    // Start from where the piece is drawn, so grabbing it mid-hint doesn't make it jump.
+    g.pos[i].copy(g.vis[i]);
+    g.grab.copy(p).sub(g.pos[i]);
+    (e.target as Element).setPointerCapture?.(e.pointerId);
+    document.body.style.cursor = "grabbing";
+  };
+  const onMove = (i: number) => (e: ThreeEvent<PointerEvent>) => {
+    const g = game.current;
+    if (g.dragging !== i) return;
+    const p = toBoard(e);
+    if (p) g.pos[i].copy(p.sub(g.grab)).setZ(0);
+  };
+  const onUp = (i: number) => (e: ThreeEvent<PointerEvent>) => {
+    const g = game.current;
+    if (g.dragging !== i) return;
+    g.dragging = -1;
+    (e.target as Element).releasePointerCapture?.(e.pointerId);
+    document.body.style.cursor = "";
+    if (g.pos[i].length() < SNAP) g.placed[i] = true;
+  };
 
   return (
-    <group ref={board} scale={BOARD}>
-      <Bubbles count={10} box={[4, 2.4, 0.6]} center={[0, 0, -1.1]} size={[0.035, 0.13]} seed={11} rise={0.1} />
-      {/* the outline to build onto, in the flavour's jelly colour */}
-      {pieces.map((p, i) => (
-        <mesh
-          key={`ghost-${i}`}
-          ref={(m) => void (ghosts.current[i] = m)}
-          geometry={p.geo}
-          position={[p.home.x, p.home.y, -0.1]}
-          scale={[1, 1, 0.05]}
-        >
-          <meshBasicMaterial color={jelly} transparent opacity={0.2} depthWrite={false} />
+    <group ref={board} scale={2.2}>
+      {/* the outline to build onto */}
+      {parts.map((part, i) => (
+        <mesh key={`ghost-${i}`} geometry={part.geo} position={[0, 0, -0.12]} scale={[1, 1, 0.05]}>
+          <meshBasicMaterial color={palette.olive} transparent opacity={0.12} depthWrite={false} />
         </mesh>
       ))}
-      <group ref={live}>
-        {pieces.map((p, i) => (
-          <group key={i} ref={(el) => void (parts.current[i] = el)}>
-            <group ref={(el) => void (pivots.current[i] = el)} position={p.pivot}>
-              <mesh geometry={p.geo} material={mats[i]} position={[-p.pivot.x, -p.pivot.y, 0]} {...handlers(i)} />
-              {i === 1 &&
-                eyeAt.map((at, k) => (
-                  <mesh key={k} ref={(m) => void (eyes.current[k] = m)} position={[at.x, at.y, 0.01]} visible={false}>
-                    <sphereGeometry args={[0.024, 24, 16]} />
-                    <meshStandardMaterial color={palette.aqua} emissive={palette.aqua} emissiveIntensity={0} toneMapped={false} />
-                  </mesh>
-                ))}
-              {i === 0 && (
-                <mesh ref={bulb} position={[bulbAt.x, bulbAt.y, 0.02]} visible={false}>
-                  <sphereGeometry args={[0.05, 24, 16]} />
-                  <meshBasicMaterial color={palette.lime} transparent opacity={0} toneMapped={false} depthWrite={false} />
-                </mesh>
-              )}
-            </group>
-          </group>
-        ))}
-      </group>
-      <mesh ref={snapRing} visible={false}>
-        <torusGeometry args={[0.5, 0.025, 12, 64]} />
-        <meshBasicMaterial color={jelly} transparent opacity={0} toneMapped={false} depthWrite={false} />
-      </mesh>
-      <mesh ref={wave} visible={false} position={[0, homes[4].y, 0.1]}>
-        <torusGeometry args={[0.5, 0.012, 12, 96]} />
-        <meshBasicMaterial color={palette.chrome} transparent opacity={0} toneMapped={false} depthWrite={false} />
-      </mesh>
-      <group ref={burst} visible={false}>
+      {parts.map((part, i) => (
+        <mesh
+          key={i}
+          ref={(m) => void (meshes.current[i] = m)}
+          geometry={part.geo}
+          onPointerDown={onDown(i)}
+          onPointerMove={onMove(i)}
+          onPointerUp={onUp(i)}
+          onPointerOver={() => {
+            if (!game.current.placed[i] && game.current.dragging === -1) document.body.style.cursor = "grab";
+          }}
+          onPointerOut={() => {
+            if (game.current.dragging === -1) document.body.style.cursor = "";
+          }}
+        >
+          <meshPhysicalMaterial color={part.color} roughness={0.25} clearcoat={1} clearcoatRoughness={0.1} />
+        </mesh>
+      ))}
+      <group ref={sparkles} visible={false}>
         {Array.from({ length: 14 }, (_, i) => (
           <mesh key={i}>
-            <sphereGeometry args={[1, 24, 16]} />
-            <FinishMaterial finish={i % 5 === 0 ? "plastic" : "glass"} color={i % 5 === 0 ? palette.lime : undefined} />
+            <octahedronGeometry args={[1, 0]} />
+            <meshStandardMaterial color={i % 2 ? "#f58220" : "#1791c8"} emissive={i % 2 ? "#f58220" : "#1791c8"} emissiveIntensity={0.8} />
           </mesh>
         ))}
       </group>
