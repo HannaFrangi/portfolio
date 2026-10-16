@@ -77,7 +77,7 @@ npm run test:e2e                  # or PW_CHANNEL=chrome npm run test:e2e to use
 
 They check that the page loads without errors and starts the 3D, never scrolls sideways, and that Night shift, build-a-bot, Copy email, the midnight badge, reduced motion, the SEO endpoints, the JSON-LD and the security headers all work.
 
-GitHub Actions (`.github/workflows/ci.yml`) runs lint, typecheck, build and these tests on every pull request and on every push to `main`.
+GitHub Actions (`.github/workflows/ci.yml`) runs lint, typecheck, build and these tests on every pull request and on every push to `production`.
 
 ### Environment
 
@@ -91,8 +91,8 @@ The page is server-rendered and open to all crawlers. It ships a sitemap, `robot
 
 ## Workflow
 
-- `dev` is for development; every push gets a Vercel preview.
-- `main` is production. Changes reach it through a pull request from `dev`.
+- `development` is the default branch; every push gets a Vercel preview.
+- `production` is the live site. Changes reach it through a pull request from `development`.
 - Dependabot opens grouped dependency updates weekly (`.github/dependabot.yml`). Vercel skips preview builds for those branches (`vercel.json`).
 - Security headers, including a baseline Content-Security-Policy, are set in `next.config.ts`.
 
