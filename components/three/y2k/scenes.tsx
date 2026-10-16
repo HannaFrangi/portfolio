@@ -623,6 +623,7 @@ const LOGO_PIVOTS = [
 
 /** The head's eye holes and the antenna ball, in logo pixels. */
 const LOGO_EYES = [[291, 313], [433, 313]] as const;
+const LOGO_EYE_R = 31 / 1134;
 const LOGO_BULB = [358, 40] as const;
 
 /**
@@ -651,13 +652,14 @@ function BuilderScene({
         geo.computeBoundingBox();
         const home = geo.boundingBox!.getCenter(new THREE.Vector3());
         geo.translate(-home.x, -home.y, -home.z);
+        const flat = part.flat.clone().translate(-home.x, -home.y, 0);
         const p = LOGO_PIVOTS[i];
         const pivot = p ? logoPx(p[0], p[1]).sub(home).setZ(0) : new THREE.Vector3();
-        return { geo, home, pivot, color: part.color, star: !!part.star };
+        return { geo, flat, home, pivot, color: part.color, star: !!part.star };
       }),
     [],
   );
-  useEffect(() => () => pieces.forEach((p) => p.geo.dispose()), [pieces]);
+  useEffect(() => () => pieces.forEach((p) => (p.geo.dispose(), p.flat.dispose())), [pieces]);
   const homes = useMemo(() => pieces.map((p) => p.home), [pieces]);
   // Glossy candy plastic in the brand blue and orange: the logo stays the logo.
   const mats = useMemo(() => {
@@ -823,16 +825,14 @@ function BuilderScene({
       onProgress(placed);
     }
 
-    // Eyes flicker on in the empty sockets, then glow; the antenna bulb lights after them.
+    // The eyes are dark glass until it boots, then flicker on and glow; the antenna bulb
+    // lights after them.
     const power = !awake ? 0 : still ? 1 : clamp01((since - 0.35) / 0.9);
     const flicker = power > 0 && power < 1 ? (Math.sin(t * 60) > 0.2 ? 1 : 0.15) : 1;
+    // A blink every few seconds once awake: the glow dips out for a moment.
+    const blink = !still && power >= 1 && (t % 3.7) < 0.12 ? 0.05 : 1;
     eyes.current.forEach((e) => {
-      if (!e) return;
-      e.visible = power > 0;
-      // A blink every few seconds once awake.
-      const blink = !still && power >= 1 && (t % 3.7) < 0.12 ? 0.1 : 1;
-      e.scale.set(1, blink, 0.35);
-      (e.material as THREE.MeshStandardMaterial).emissiveIntensity = 2.6 * power * flicker;
+      if (e) (e.material as THREE.MeshStandardMaterial).emissiveIntensity = 2.6 * power * flicker * blink;
     });
     if (bulb.current) {
       bulb.current.visible = power > 0;
@@ -951,11 +951,12 @@ function BuilderScene({
         <mesh
           key={`ghost-${i}`}
           ref={(m) => void (ghosts.current[i] = m)}
-          geometry={p.geo}
+          geometry={p.flat}
           position={[p.home.x, p.home.y, -0.1]}
-          scale={[1, 1, 0.05]}
         >
-          <meshBasicMaterial color={jelly} transparent opacity={0.2} depthWrite={false} />
+          {/* Writes depth and draws only where nothing is yet, so overlapping shapes
+              (the antenna's ball and stick) stay one even layer. */}
+          <meshBasicMaterial color={jelly} transparent opacity={0.2} depthFunc={THREE.LessDepth} />
         </mesh>
       ))}
       <group ref={live}>
@@ -965,9 +966,11 @@ function BuilderScene({
               <mesh geometry={p.geo} material={mats[i]} position={[-p.pivot.x, -p.pivot.y, 0]} {...handlers(i)} />
               {i === 1 &&
                 eyeAt.map((at, k) => (
-                  <mesh key={k} ref={(m) => void (eyes.current[k] = m)} position={[at.x, at.y, 0.01]} visible={false}>
-                    <sphereGeometry args={[0.024, 24, 16]} />
-                    <meshStandardMaterial color={palette.aqua} emissive={palette.aqua} emissiveIntensity={0} toneMapped={false} />
+                  // A disc filling the whole socket, set just behind the face, so the background
+                  // never shows through the eyes.
+                  <mesh key={k} ref={(m) => void (eyes.current[k] = m)} position={[at.x, at.y, 0]} rotation={[Math.PI / 2, 0, 0]}>
+                    <cylinderGeometry args={[LOGO_EYE_R * 0.97, LOGO_EYE_R * 0.97, 0.09, 32]} />
+                    <meshStandardMaterial color="#0b1433" roughness={0.15} emissive={palette.aqua} emissiveIntensity={0} toneMapped={false} />
                   </mesh>
                 ))}
               {i === 0 && (
