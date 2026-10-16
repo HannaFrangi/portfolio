@@ -28,6 +28,8 @@ import {
 import {
   Blob,
   Laptop,
+  LOGO_EYE_R,
+  LOGO_EYES,
   LogoBadge,
   logoParts,
   Orbit,
@@ -635,6 +637,7 @@ function BuilderScene({
   const parts = useMemo(() => logoParts(), []);
   const board = useRef<THREE.Group>(null);
   const meshes = useRef<(THREE.Mesh | null)[]>([]);
+  const ghosts = useRef<(THREE.Mesh | null)[]>([]);
   const sparkles = useRef<THREE.Group>(null);
   const size = useThree((s) => s.size);
   const game = useRef({
@@ -721,6 +724,10 @@ function BuilderScene({
         g.dragging === i ? 0.25 : 0,
       );
       g.vis[i].set(m.position.x, m.position.y, 0);
+      // The outline under a piece goes once the piece is home, so it never shows through
+      // the gaps (or the eyes) of the finished logo.
+      const ghost = ghosts.current[i];
+      if (ghost) ghost.visible = !g.placed[i] || g.pos[i].length() > 0.01;
       m.rotation.set(0, 0, g.rot[i]);
       const lift = g.dragging === i ? 1.08 : 1;
       m.scale.setScalar(damp(m.scale.x, lift, dt, 12));
@@ -814,8 +821,15 @@ function BuilderScene({
     <group ref={board} scale={BOARD}>
       {/* the outline to build onto */}
       {parts.map((part, i) => (
-        <mesh key={`ghost-${i}`} geometry={part.geo} position={[0, 0, -0.12]} scale={[1, 1, 0.05]}>
-          <meshBasicMaterial color={palette.olive} transparent opacity={0.12} depthWrite={false} />
+        <mesh
+          key={`ghost-${i}`}
+          ref={(m) => void (ghosts.current[i] = m)}
+          geometry={part.flat}
+          position={[0, 0, -0.12]}
+        >
+          {/* Writes depth and draws only where nothing is yet, so overlapping shapes
+              (the antenna's ball and stick) stay one even layer. */}
+          <meshBasicMaterial color={palette.olive} transparent opacity={0.12} depthFunc={THREE.LessDepth} />
         </mesh>
       ))}
       {parts.map((part, i) => (
@@ -834,6 +848,16 @@ function BuilderScene({
           }}
         >
           <meshPhysicalMaterial color={part.color} roughness={0.25} clearcoat={1} clearcoatRoughness={0.1} />
+          {/* White eyes fill the head's sockets, like the printed logo, instead of being
+              holes the background shows through. Set just behind the face so they read as inset. */}
+          {i === 1 &&
+            LOGO_EYES.map((eye, k) => (
+              <mesh key={k} position={[eye.x, eye.y, 0.04]} rotation={[Math.PI / 2, 0, 0]}>
+                <cylinderGeometry args={[LOGO_EYE_R * 0.97, LOGO_EYE_R * 0.97, 0.08, 32]} />
+                {/* a little self-lit, so they stay white under the warm night lights */}
+                <meshPhysicalMaterial color="#ffffff" emissive="#ffffff" emissiveIntensity={0.45} roughness={0.2} clearcoat={1} clearcoatRoughness={0.1} />
+              </mesh>
+            ))}
         </mesh>
       ))}
       <group ref={sparkles} visible={false}>

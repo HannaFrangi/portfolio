@@ -884,17 +884,20 @@ function buildLogoParts() {
     [358, 770], [240, 855], [283, 715], [167, 629], [313, 628],
   ]);
   const point = polygon([[358, 828], [457, 906], [357, 1128], [257, 897]]);
+  // The same outline as one flat sheet, for the build game's target outline: one layer
+  // everywhere (overlaps merged), so it draws as a clean silhouette.
+  const flat = (shapes: THREE.Shape | THREE.Shape[]) => new THREE.ShapeGeometry(shapes, 24);
   const extrude = (shapes: THREE.Shape | THREE.Shape[]) =>
     new THREE.ExtrudeGeometry(shapes, { depth: 0.07, bevelEnabled: true, bevelThickness: 0.018, bevelSize: 0.01, bevelSegments: 3, curveSegments: 24 });
   // Each part flies in from its own direction, like a robot being assembled.
   return [
-    { geo: extrude(antenna), color: LOGO_BLUE, from: [0, 1.2, 0.3] },
-    { geo: extrude(head), color: LOGO_BLUE, from: [0, 0.8, -0.6] },
-    { geo: extrude(leftArm), color: LOGO_BLUE, from: [-1.1, 0.1, 0.2] },
-    { geo: extrude(rightArm), color: LOGO_BLUE, from: [1.1, 0.1, 0.2] },
-    { geo: extrude(star), color: LOGO_ORANGE, from: [0, -0.2, 1.2], star: true },
-    { geo: extrude(point), color: LOGO_BLUE, from: [0, -1.1, 0] },
-  ] as { geo: THREE.ExtrudeGeometry; color: string; from: V3; star?: boolean }[];
+    { geo: extrude(antenna), flat: flat(antenna), color: LOGO_BLUE, from: [0, 1.2, 0.3] },
+    { geo: extrude(head), flat: flat(head), color: LOGO_BLUE, from: [0, 0.8, -0.6] },
+    { geo: extrude(leftArm), flat: flat(leftArm), color: LOGO_BLUE, from: [-1.1, 0.1, 0.2] },
+    { geo: extrude(rightArm), flat: flat(rightArm), color: LOGO_BLUE, from: [1.1, 0.1, 0.2] },
+    { geo: extrude(star), flat: flat(star), color: LOGO_ORANGE, from: [0, -0.2, 1.2], star: true },
+    { geo: extrude(point), flat: flat(point), color: LOGO_BLUE, from: [0, -1.1, 0] },
+  ] as { geo: THREE.ExtrudeGeometry; flat: THREE.BufferGeometry; color: string; from: V3; star?: boolean }[];
 }
 
 /**
