@@ -14,10 +14,11 @@ test.describe("page", () => {
     const errors: string[] = [];
     page.on("pageerror", (e) => errors.push(e.message));
     page.on("console", (m) => {
-      // Vercel Analytics only exists on Vercel; under `next start` its script 404s.
-      // Chrome leaves the URL out of the 404 message, so check where it came from too.
-      const analytics = `${m.text()} ${m.location().url}`.includes("_vercel/insights");
-      if (m.type() === "error" && !analytics) errors.push(m.text());
+      // Vercel Analytics and Speed Insights only exist on Vercel; under `next start` their
+      // scripts (under /_vercel/) 404. Chrome leaves the URL out of the 404 message, so check
+      // where it came from too.
+      const vercel = `${m.text()} ${m.location().url}`.includes("/_vercel/");
+      if (m.type() === "error" && !vercel) errors.push(m.text());
     });
 
     await page.goto("/");
