@@ -16,16 +16,16 @@ const subscribeCoarse = (cb: () => void) => {
 
 /**
  * Build-a-bot: the RoboStars logo in six pieces, dragged back together. Ties the robotics
- * teaching to the dev work. In the secret neo-Y2K look the built logo boots up and comes
+ * teaching to the dev work. In the secret looks the built logo boots up (or sprouts) and comes
  * alive. The buttons give keyboard and screen-reader users the same outcome as dragging.
  */
 export default function RobotBuilder() {
   const skin = useSkin();
   // A fresh game when the look changes: the other look's board starts scattered.
-  return <Builder key={skin} alive={skin === "y2k"} />;
+  return <Builder key={skin} alive={skin !== "classic"} overgrown={skin === "wasteland"} />;
 }
 
-function Builder({ alive }: { alive: boolean }) {
+function Builder({ alive, overgrown }: { alive: boolean; overgrown: boolean }) {
   const [placed, setPlaced] = useState(0);
   const [command, setCommand] = useState<BuilderCommand>({ type: "scatter", n: 0 });
   const [playing, setPlaying] = useState(false);
@@ -43,11 +43,13 @@ function Builder({ alive }: { alive: boolean }) {
             id="builder-title"
             className="font-display text-[clamp(2.2rem,4.4vw,3.6rem)] font-bold leading-[1.02] tracking-[-0.03em]"
           >
-            {alive ? "Build a RoboStars bot. Watch it wake up." : "Build a RoboStars bot"}
+            {overgrown ? "Build a RoboStars bot. Watch it grow." : alive ? "Build a RoboStars bot. Watch it wake up." : "Build a RoboStars bot"}
           </h2>
           <p data-reveal className="mt-4 max-w-md leading-7 text-ink-soft">
             I teach kids to build robots at RoboStars.{" "}
-            {alive ? (
+            {overgrown ? (
+              <>Your turn: drag the pieces of our old sign onto the outline. When the last one clicks in, watch what grows.</>
+            ) : alive ? (
               <>Your turn: drag the pieces of our logo onto the outline. When the last one clicks in, it comes alive.</>
             ) : (
               <>Your turn: drag the pieces onto the outline and they click into place.</>
@@ -85,7 +87,7 @@ function Builder({ alive }: { alive: boolean }) {
           <div className="pointer-events-none absolute left-4 top-4 max-w-[60%] md:left-5 md:top-5">
             <p aria-live="polite" className="font-display text-base font-bold leading-snug text-olive">
               {done ? (
-                alive ? <>Built! The RoboStars bot is alive. Give it a poke.</> : <>Built! That&apos;s the RoboStars logo.</>
+                overgrown ? <>Built! Looks like it&apos;s been here for years.</> : alive ? <>Built! The RoboStars bot is alive. Give it a poke.</> : <>Built! That&apos;s the RoboStars logo.</>
               ) : (
                 <>{placed} / {PIECES} pieces</>
               )}

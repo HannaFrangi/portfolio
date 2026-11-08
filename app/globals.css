@@ -1082,3 +1082,455 @@ html.cheat::view-transition-new(root) {
   from { clip-path: circle(0% at 50% 50%); }
   to { clip-path: circle(75% at 50% 50%); }
 }
+
+/* =====================================================================
+   The wasteland: the third secret look (Konami code, after neo-Y2K aqua).
+   A city decades after everyone left, taken back by moss and ivy, in golden-hour light.
+   Field-journal paper, tape, stencilled headings, rusted plate buttons. Dusk turns it
+   teal and dark, and the spores light up. Token names are kept from the first theme
+   (moss = big display colour, olive = small text and links, sage = soft decor,
+   sand = hairlines) so the markup didn't change.
+   ===================================================================== */
+
+:where([data-skin="classic"]) .skin-wasteland,
+:where([data-skin="y2k"]) .skin-wasteland,
+:where([data-skin="wasteland"]) .skin-classic,
+:where([data-skin="wasteland"]) .skin-y2k,
+:where([data-skin="wasteland"]) .sky-dark,
+[data-theme="dark"]:where([data-skin="wasteland"]) .sky-light {
+  display: none;
+}
+
+[data-theme="dark"]:where([data-skin="wasteland"]) .sky-dark {
+  display: block;
+}
+
+:root:where([data-skin="wasteland"]) {
+  --mist: #e8dfca; /* bone paper */
+  --cream: #f0e8d5;
+  --paper: #f7f0df; /* always the light text on dark panels */
+  --sand: #cdbe9b;
+  --sand-2: #b9a884;
+  --moss: #4b6626; /* big type: ~5:1 on mist */
+  --sage: #8fa25a;
+  --olive: #353f1e; /* small text and links: ~9:1 on mist */
+  --ink: #1f1a12;
+  --ink-soft: #544c3c; /* ~6.5:1 on mist */
+  --accent: #b4562b; /* rust */
+  --lime: #a9b86a; /* lichen */
+  --focus: var(--olive);
+  --surface: #f7f0df;
+  --hairline: rgb(255 249 232 / 0.75);
+  --shade: 66 48 24;
+  --rust-top: #b4562b;
+  --rust-bottom: #8a3a18;
+  --rivet: 60 30 12;
+  --tape: 214 205 180;
+  --panel: 33 30 21;
+  --skin-display: var(--font-stencil);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  color-scheme: light;
+}
+
+html:where([data-skin="wasteland"]) {
+  background: var(--mist);
+  scrollbar-color: color-mix(in oklab, var(--moss) 50%, transparent) transparent;
+  accent-color: var(--moss);
+  caret-color: var(--accent);
+}
+
+:where([data-skin="wasteland"]) body {
+  overflow-x: clip;
+  color: var(--ink);
+  font-family: var(--font-sans);
+  background:
+    radial-gradient(60vw 50vh at 88% 6%, rgb(242 182 90 / 0.28), transparent 70%),
+    radial-gradient(50vw 40vh at 4% 32%, rgb(110 139 61 / 0.16), transparent 70%),
+    radial-gradient(45vw 35vh at 92% 72%, rgb(180 86 43 / 0.08), transparent 70%),
+    linear-gradient(180deg, var(--mist) 0%, var(--cream) 45%, var(--mist) 100%);
+}
+
+/* Paper grain: heavier than the other looks, because this one is meant to feel handled. */
+:where([data-skin="wasteland"]) body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  pointer-events: none;
+  opacity: 0.09;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.35 0 0 0 0 0.28 0 0 0 0 0.16 0 0 0 1 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+:where([data-skin="wasteland"]) ::selection {
+  background: var(--moss);
+  color: var(--paper);
+}
+
+/* Stencil headings run tight and upright; the stencil gaps need a little air. */
+:where([data-skin="wasteland"]) .font-display {
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+}
+
+@layer components {
+  /* A field-journal page: warm paper, a soft stain, and a strip of tape holding it on. */
+  :where([data-skin="wasteland"]) .clay {
+    position: relative;
+    background:
+      radial-gradient(120% 80% at 85% 110%, rgb(160 120 60 / 0.12), transparent 60%),
+      radial-gradient(60% 40% at 10% 0%, rgb(255 255 255 / 0.5), transparent 70%),
+      linear-gradient(180deg, rgb(250 244 230 / 0.94), rgb(238 228 204 / 0.9));
+    border: 1px solid rgb(120 95 55 / 0.18);
+    border-radius: 6px;
+    box-shadow:
+      inset 0 0 40px -10px rgb(150 115 60 / 0.18),
+      0 22px 40px -26px rgb(var(--shade) / 0.55),
+      0 2px 4px -1px rgb(var(--shade) / 0.18);
+    backdrop-filter: blur(6px);
+  }
+
+  :where([data-skin="wasteland"]) .clay::before {
+    content: "";
+    position: absolute;
+    top: -11px;
+    left: 50%;
+    width: 92px;
+    height: 24px;
+    translate: -50% 0;
+    rotate: -2.5deg;
+    background: rgb(var(--tape) / 0.72);
+    box-shadow: 0 1px 2px rgb(var(--shade) / 0.18);
+    /* ragged torn ends */
+    clip-path: polygon(3% 0, 97% 4%, 100% 30%, 96% 55%, 100% 82%, 97% 100%, 2% 96%, 0 70%, 4% 45%, 0 18%);
+    pointer-events: none;
+  }
+
+  /* Small floating cards (the nav, badges) don't need tape. */
+  :where([data-skin="wasteland"]) .clay.\!rounded-full::before,
+  :where([data-skin="wasteland"]) header .clay::before {
+    display: none;
+  }
+
+  :where([data-skin="wasteland"]) .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    border-radius: 6px;
+    padding: 0.55rem 1.1rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition:
+      transform 0.4s var(--ease-out),
+      box-shadow 0.4s var(--ease-out),
+      filter 0.4s var(--ease-out);
+  }
+
+  /* A rusted plate with four rivets, stencilled. Bone on rust is ~5.6:1. */
+  :where([data-skin="wasteland"]) .pill-solid {
+    padding-inline: 1.35rem;
+    font-family: var(--font-stencil), var(--font-sans);
+    font-size: 1rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #fbf3e2;
+    background:
+      radial-gradient(circle at 9px 9px, rgb(var(--rivet) / 0.9) 0 2px, rgb(255 220 180 / 0.35) 2.5px, transparent 3.5px),
+      radial-gradient(circle at calc(100% - 9px) 9px, rgb(var(--rivet) / 0.9) 0 2px, rgb(255 220 180 / 0.35) 2.5px, transparent 3.5px),
+      radial-gradient(circle at 9px calc(100% - 9px), rgb(var(--rivet) / 0.9) 0 2px, rgb(255 220 180 / 0.35) 2.5px, transparent 3.5px),
+      radial-gradient(circle at calc(100% - 9px) calc(100% - 9px), rgb(var(--rivet) / 0.9) 0 2px, rgb(255 220 180 / 0.35) 2.5px, transparent 3.5px),
+      radial-gradient(70% 90% at 20% 20%, rgb(255 190 120 / 0.25), transparent 60%),
+      radial-gradient(40% 60% at 85% 80%, rgb(60 25 8 / 0.35), transparent 70%),
+      linear-gradient(180deg, var(--rust-top), var(--rust-bottom));
+    border: 1px solid rgb(70 30 10 / 0.6);
+    box-shadow:
+      inset 0 1px 0 rgb(255 210 160 / 0.35),
+      inset 0 -2px 0 rgb(40 15 5 / 0.35),
+      0 10px 22px -10px rgb(110 45 15 / 0.7);
+    text-shadow: 0 1px 0 rgb(40 15 5 / 0.45);
+  }
+
+  /* An address must stay readable as typed: no stencil, no capitals. */
+  :where([data-skin="wasteland"]) a[href^="mailto:"].pill-solid {
+    font-family: var(--font-sans);
+    font-size: 0.9rem;
+    font-weight: 600;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+
+  :where([data-skin="wasteland"]) .pill-solid:hover {
+    filter: brightness(1.08) saturate(1.05);
+  }
+
+  /* A strip of paper. */
+  :where([data-skin="wasteland"]) .pill-soft {
+    background: linear-gradient(180deg, rgb(250 244 230 / 0.86), rgb(236 225 200 / 0.8));
+    border: 1px solid rgb(120 95 55 / 0.22);
+    box-shadow: 0 6px 16px -10px rgb(var(--shade) / 0.5);
+    backdrop-filter: blur(8px);
+  }
+
+  :where([data-skin="wasteland"]) .link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-weight: 600;
+    color: var(--olive);
+    text-decoration: underline;
+    text-decoration-color: color-mix(in oklab, var(--accent) 55%, transparent);
+    text-decoration-thickness: 2px;
+    text-underline-offset: 4px;
+    transition: color 0.3s var(--ease-out), text-decoration-color 0.3s var(--ease-out);
+  }
+
+  /* A rubber-stamped label. */
+  :where([data-skin="wasteland"]) .chip {
+    display: inline-block;
+    border-radius: 3px;
+    padding: 0.25rem 0.6rem;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--olive);
+    background: rgb(var(--tape) / 0.25);
+    border: 1.5px solid color-mix(in oklab, var(--olive) 55%, transparent);
+  }
+}
+
+:where([data-skin="wasteland"]) .step-icon {
+  color: color-mix(in oklab, var(--olive) calc((1 - var(--on, 1)) * 100%), var(--accent));
+  background: radial-gradient(circle at 40% 30%, rgb(255 255 255 / 0.55), transparent 60%), var(--surface);
+  border: 2px solid currentColor;
+  box-shadow: 0 8px 20px -12px rgb(var(--shade) / 0.55);
+  rotate: -4deg;
+}
+
+:where([data-skin="wasteland"]) .pin-progress {
+  position: absolute;
+  left: 50%;
+  bottom: 28px;
+  width: 140px;
+  height: 3px;
+  translate: -50% 0;
+  border-radius: 1px;
+  background: color-mix(in srgb, var(--moss) 20%, transparent);
+  overflow: hidden;
+  opacity: clamp(0, min(var(--p, 0) * 25, (1 - var(--p, 0)) * 25), 1);
+}
+
+/* Scrim where copy sits: a dark kraft notebook page over the blurred street. */
+:where([data-skin="wasteland"]) .about-panel {
+  border-radius: 6px;
+  padding: 1.75rem;
+  background:
+    radial-gradient(90% 60% at 100% 100%, rgb(110 139 61 / 0.12), transparent 70%),
+    rgb(var(--panel) / 0.8);
+  border: 1px solid rgb(255 240 210 / 0.12);
+  backdrop-filter: blur(10px) saturate(1.1);
+}
+
+/* The robot talks on a taped scrap of paper, in pencil. */
+:where([data-skin="wasteland"]) .robot-bubble {
+  position: absolute;
+  right: -0.5rem;
+  bottom: 0.5rem;
+  width: max-content;
+  max-width: min(15rem, 60vw);
+  padding: 0.5rem 0.9rem 0.6rem;
+  border-radius: 3px;
+  rotate: -2deg;
+  background: linear-gradient(180deg, #fbf5e6, #efe4c9);
+  color: #2a241a;
+  font-family: var(--font-hand), var(--font-sans);
+  font-size: 1.3rem;
+  font-weight: 600;
+  line-height: 1.15;
+  box-shadow: 0 12px 24px -14px rgb(40 30 15 / 0.6);
+  border: 1px solid rgb(120 95 55 / 0.25);
+}
+
+/* Hero: the pitch is a note someone left, taped up, in their own hand. */
+:where([data-skin="wasteland"]) #top .intro-late > .pill-soft {
+  position: relative;
+  rotate: -1.5deg;
+  border-radius: 3px;
+  font-family: var(--font-hand), var(--font-sans);
+  font-size: 1.45rem;
+  line-height: 1.2;
+  background: linear-gradient(180deg, #fbf5e6, #ece0c3);
+}
+
+:where([data-skin="wasteland"]) #top .intro-late > .pill-soft::before {
+  content: "";
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  width: 84px;
+  height: 22px;
+  translate: -50% 0;
+  rotate: 3deg;
+  background: rgb(var(--tape) / 0.75);
+  clip-path: polygon(3% 0, 97% 4%, 100% 30%, 96% 55%, 100% 82%, 97% 100%, 2% 96%, 0 70%, 4% 45%, 0 18%);
+}
+
+:where([data-skin="wasteland"]) #top .intro-late > .pill-soft span {
+  font-family: var(--font-sans);
+  font-size: 0.85rem;
+}
+
+/* The hero headline sits on bright sky: a soft dark halo keeps the stencil readable. */
+:where([data-skin="wasteland"]) #hero-title {
+  text-shadow: 0 2px 24px rgb(255 240 210 / 0.55);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* Sun shafts slide slowly across the street. */
+  :where([data-skin="wasteland"]) .light-sweep {
+    background: linear-gradient(115deg, transparent 30%, rgb(255 205 130 / 0.32) 45%, transparent 60%);
+    mix-blend-mode: soft-light;
+    animation: sweep 12s ease-in-out infinite;
+  }
+}
+
+/* ---------------------------------------------------------------- dusk */
+[data-theme="dark"]:where([data-skin="wasteland"]) {
+  --mist: #0f171a;
+  --cream: #141f22;
+  --surface: #1b2629;
+  --sand: #2e3b3c;
+  --sand-2: #3a4a4a;
+  --moss: #c9db7a; /* big type: lichen on the dusk sky, ~12:1 */
+  --sage: #3e5a3a;
+  --olive: #e0d9c1; /* small text and links */
+  --ink: #efe8d6;
+  --ink-soft: #a9a796;
+  --accent: #eda24f; /* lantern light */
+  --lime: #e9f28a;
+  --focus: var(--moss);
+  --hairline: rgb(239 232 214 / 0.12);
+  --shade: 0 0 0;
+  --rust-top: #eda24f;
+  --rust-bottom: #c9772b;
+  --rivet: 80 40 10;
+  --tape: 150 142 118;
+  --panel: 10 16 18;
+  color-scheme: dark;
+}
+
+[data-theme="dark"]:where([data-skin="wasteland"]) body {
+  background:
+    radial-gradient(55vw 45vh at 85% 6%, rgb(233 242 138 / 0.07), transparent 70%),
+    radial-gradient(50vw 40vh at 5% 30%, rgb(237 162 79 / 0.08), transparent 70%),
+    linear-gradient(180deg, var(--mist) 0%, var(--cream) 45%, var(--mist) 100%);
+}
+
+[data-theme="dark"]:where([data-skin="wasteland"]) body::after {
+  mix-blend-mode: normal;
+  opacity: 0.05;
+}
+
+[data-theme="dark"]:where([data-skin="wasteland"]) #hero-title {
+  text-shadow: 0 2px 30px rgb(0 0 0 / 0.6);
+}
+
+@layer components {
+  /* At dusk the pages are a worn charcoal notebook, lit from the front by a lantern. */
+  [data-theme="dark"]:where([data-skin="wasteland"]) .clay {
+    background:
+      radial-gradient(80% 60% at 20% 0%, rgb(237 162 79 / 0.08), transparent 70%),
+      linear-gradient(180deg, rgb(32 42 44 / 0.92), rgb(22 30 32 / 0.9));
+    border-color: rgb(239 232 214 / 0.1);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.06),
+      0 24px 48px -28px rgb(0 0 0 / 0.8);
+  }
+
+  [data-theme="dark"]:where([data-skin="wasteland"]) .pill-soft {
+    background: linear-gradient(180deg, rgb(36 47 49 / 0.88), rgb(24 33 35 / 0.86));
+    border-color: rgb(239 232 214 / 0.14);
+    box-shadow: 0 6px 18px -10px rgb(0 0 0 / 0.7);
+  }
+
+  /* The plate glows like a lamp at dusk: dark ink on amber, ~9:1. */
+  [data-theme="dark"]:where([data-skin="wasteland"]) .pill-solid {
+    color: #1e1408;
+    text-shadow: 0 1px 0 rgb(255 230 190 / 0.4);
+    border-color: rgb(120 60 15 / 0.6);
+    box-shadow:
+      inset 0 1px 0 rgb(255 230 190 / 0.5),
+      inset 0 -2px 0 rgb(90 40 10 / 0.35),
+      0 10px 28px -8px rgb(237 162 79 / 0.55);
+  }
+
+  [data-theme="dark"]:where([data-skin="wasteland"]) .chip {
+    background: rgb(233 242 138 / 0.06);
+    border-color: rgb(201 219 122 / 0.4);
+    color: var(--moss);
+  }
+}
+
+[data-theme="dark"]:where([data-skin="wasteland"]) .step-icon {
+  background: radial-gradient(circle at 40% 30%, rgb(255 255 255 / 0.08), transparent 60%), var(--surface);
+  box-shadow: 0 8px 20px -12px rgb(0 0 0 / 0.8);
+}
+
+[data-theme="dark"]:where([data-skin="wasteland"]) .skip-link {
+  background: var(--moss);
+  color: #10180a;
+}
+
+[data-theme="dark"]:where([data-skin="wasteland"]) .about-panel {
+  background: rgb(var(--panel) / 0.78);
+}
+
+[data-theme="dark"]:where([data-skin="wasteland"]) ::selection {
+  background: var(--moss);
+  color: #10180a;
+}
+
+[data-theme="dark"]:where([data-skin="wasteland"]) #top .intro-late > .pill-soft {
+  background: linear-gradient(180deg, #d9cfb4, #c4b893);
+  color: #221c12;
+}
+
+[data-theme="dark"]:where([data-skin="wasteland"]) #top .intro-late > .pill-soft .text-olive {
+  color: #33401c;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  [data-theme="dark"]:where([data-skin="wasteland"]) .light-sweep {
+    background: linear-gradient(115deg, transparent 30%, rgb(233 242 138 / 0.1) 45%, transparent 60%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) and (min-width: 768px) {
+  :where([data-skin="wasteland"]) header nav.pill-soft {
+    background: rgb(247 240 223 / 0.94);
+  }
+
+  [data-theme="dark"]:where([data-skin="wasteland"]) header nav.pill-soft {
+    background: rgb(24 33 35 / 0.94);
+  }
+
+  :where([data-skin="wasteland"]) .about-panel {
+    background: rgb(var(--panel) / 0.9);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+/* Phones: the short pitch sits right on the busy street, so it gets a scrap of paper too. */
+:where([data-skin="wasteland"]) #top p.intro-late.md\:hidden {
+  padding: 0.6rem 0.9rem;
+  border-radius: 4px;
+  color: var(--ink);
+  background: rgb(247 240 223 / 0.9);
+  box-shadow: 0 8px 18px -12px rgb(var(--shade) / 0.6);
+}
+
+[data-theme="dark"]:where([data-skin="wasteland"]) #top p.intro-late.md\:hidden {
+  background: rgb(20 29 31 / 0.88);
+}
