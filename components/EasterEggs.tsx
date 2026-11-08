@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { person } from "@/lib/content";
-import { loadY2k } from "@/components/three/spots";
+import { loadWasteland, loadY2k } from "@/components/three/spots";
 import { getFlavor, getSkin, setFlavor, setSkin, setTheme, useTheme } from "@/lib/theme";
 
 const ROBOT = String.raw`
@@ -54,8 +54,9 @@ const KEYS: Record<string, string> = { ArrowUp: "up", ArrowDown: "down", ArrowLe
 
 /**
  * Each entry of the code moves to the next look: the classic site, then the neo-Y2K site
- * in green, then in aqua, then back. The new look opens as a circle growing from the
- * middle where supported. The neo-Y2K 3D is fetched first, so it's ready when it appears.
+ * in green, then in aqua, then the overgrown wasteland, then back. The new look opens as a
+ * circle growing from the middle where supported. Its 3D is fetched first, so it's ready
+ * when it appears.
  */
 async function nextLook() {
   const skin = getSkin(), flavor = getFlavor();
@@ -63,10 +64,12 @@ async function nextLook() {
     if (skin === "classic") {
       setFlavor("green");
       setSkin("y2k");
-    } else if (flavor === "green") setFlavor("aqua");
+    } else if (skin === "y2k" && flavor === "green") setFlavor("aqua");
+    else if (skin === "y2k") setSkin("wasteland");
     else setSkin("classic");
   };
   if (skin === "classic") await loadY2k().catch(() => {});
+  if (skin === "y2k" && flavor === "aqua") await loadWasteland().catch(() => {});
   const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   if (reduced || !document.startViewTransition) return apply();
   const root = document.documentElement;
@@ -77,7 +80,7 @@ async function nextLook() {
 /**
  * Small hidden extras: a console greeting, for late-night visitors a badge plus stars in
  * the Night shift sky (CSS keys off html[data-midnight]), and the Konami code, which
- * unlocks the neo-Y2K look (see nextLook).
+ * unlocks the secret looks (see nextLook).
  */
 export default function EasterEggs() {
   const midnight = useSyncExternalStore(subscribeClock, isMidnight, () => false);

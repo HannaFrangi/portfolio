@@ -17,8 +17,21 @@ export default function Reveal() {
       },
       { rootMargin: "0px 0px -20% 0px", threshold: 0.05 },
     );
-    document.querySelectorAll("[data-section]").forEach((el) => io.observe(el));
+    const watch = (scope: ParentNode) => scope.querySelectorAll("[data-section]:not([data-shown])").forEach((el) => io.observe(el));
+    watch(document);
+    // Sections can be re-created later (the build game remounts when the Konami code
+    // switches looks); watch those too, or their copy would stay hidden.
+    const mo = new MutationObserver((records) => {
+      for (const r of records)
+        r.addedNodes.forEach((n) => {
+          if (!(n instanceof Element)) return;
+          if (n.matches("[data-section]")) io.observe(n);
+          watch(n);
+        });
+    });
+    mo.observe(document.body, { childList: true, subtree: true });
     return () => {
+      mo.disconnect();
       io.disconnect();
       root.classList.remove("reveal");
     };

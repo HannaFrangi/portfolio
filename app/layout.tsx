@@ -33,6 +33,20 @@ const displayY2k = localFont({
   preload: false,
 });
 
+// The secret wasteland look: a heavy stencil for headings and a field-journal hand for
+// notes. Not preloaded, for the same reason as the neo-Y2K face.
+const displayWasteland = localFont({
+  src: [{ path: "./fonts/BigShouldersStencil-latin.woff2", weight: "600 900" }],
+  variable: "--font-stencil",
+  preload: false,
+});
+
+const hand = localFont({
+  src: [{ path: "./fonts/Caveat-latin.woff2", weight: "500 700" }],
+  variable: "--font-hand",
+  preload: false,
+});
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -79,7 +93,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       data-skin="classic"
       data-flavor="green"
       suppressHydrationWarning
-      className={`${serif.variable} ${display.variable} ${displayY2k.variable} ${geistSans.variable} ${geistMono.variable} antialiased`}
+      className={`${serif.variable} ${display.variable} ${displayY2k.variable} ${displayWasteland.variable} ${hand.variable} ${geistSans.variable} ${geistMono.variable} antialiased`}
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeBootScript }} />

@@ -1,0 +1,1046 @@
+"use client";
+
+import {
+  Suspense,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type RefObject,
+} from 'react';
+import type { ThreeEvent } from "@react-three/fiber";
+import * as THREE from "three";
+import { useFrame, useThree } from "@react-three/fiber";
+import { PerspectiveCamera, useTexture, View } from "@react-three/drei";
+import { useTheme } from "@/lib/theme";
+import type { Project } from "@/lib/content";
+import {
+  Studio,
+  clamp01,
+  easeInOut,
+  easeOut,
+  motion,
+  palette,
+  pinsActive,
+  pointer,
+  sectionProgress,
+} from './kit';
+import {
+  Bird,
+  Gear,
+  Laptop,
+  LOGO_EYE_R,
+  LOGO_EYES,
+  LogoBadge,
+  logoParts,
+  Phone,
+  Robot,
+  Rock,
+  SignMaterial,
+  Sprig,
+  Spores,
+  Tablet,
+  VineRing,
+  leafGeometry,
+  useReevuScreen,
+  type RobotDrive,
+} from "./pieces";
+
+const damp = (from: number, to: number, dt: number, rate = 5) => from + (to - from) * (1 - Math.exp(-dt * rate));
+const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+/** Local 0..1 for the slice [a, b] of a larger timeline. */
+const span = (p: number, a: number, b: number) => clamp01((p - a) / (b - a));
+
+/* ------------------------------------------------------------------ hero */
+
+/** Vertical fade for the bottom of the portrait (alphaMap reads the green channel). */
+const portraitFade = (() => {
+  if (typeof document === "undefined") return null;
+  const data = new Uint8Array(4 * 64);
+  for (let i = 0; i < 64; i++) {
+    const v = Math.round(255 * Math.min(1, Math.max(0, (i / 63 - 0.1) / 0.28)));
+    data.set([v, v, v, 255], i * 4);
+  }
+  const t = new THREE.DataTexture(data, 1, 64);
+  // DataTextures default to nearest sampling, which shows as bands in a gradient.
+  t.magFilter = THREE.LinearFilter;
+  t.minFilter = THREE.LinearFilter;
+  t.needsUpdate = true;
+  return t;
+})();
+
+/** Sharpens the cut-out's soft edge so the faint light fringe from the original photo drops out. */
+const tightenMatte = (shader: { fragmentShader: string }) => {
+  shader.fragmentShader = shader.fragmentShader.replace(
+    "#include <map_fragment>",
+    "#include <map_fragment>\n  diffuseColor.a = smoothstep(0.35, 0.8, diffuseColor.a);",
+  );
+};
+
+/** Top of the head in the portrait's own space: the plane spans -3.75..0.75 and the
+ *  photo has ~9% of headroom above the hair. */
+const HEAD_TOP = 0.33;
+
+function Portrait() {
+  const texture = useTexture("/textures/portrait.png", (t) => {
+    (t as THREE.Texture).colorSpace = THREE.SRGBColorSpace;
+  });
+  // The static portrait in the page shows until this 3D one exists, then steps aside.
+  useEffect(() => {
+    document.documentElement.dataset.portrait = "3d";
+  }, []);
+  // Golden hour warms the photo a touch; at dusk it's lit by lantern light.
+  const dark = useTheme() === "dark";
+  const img = texture.image as { width: number; height: number };
+  const h = 4.5;
+  return (
+    <mesh position={[0, -1.5, 0]}>
+      <planeGeometry args={[(h * img.width) / img.height, h]} />
+      {/* The bottom fades into the page like the landscape behind it, instead of ending
+          in a hard line where the hero's 3D box is clipped. A low alphaTest still drops
+          the empty pixels around the cut-out so they never hide the orbit ring. */}
+      <meshBasicMaterial
+        map={texture}
+        color={dark ? "#c9b9a0" : "#fff4e2"}
+        alphaMap={portraitFade}
+        transparent
+        alphaTest={0.02}
+        toneMapped={false}
+        onBeforeCompile={tightenMatte}
+      />
+    </mesh>
+  );
+}
+
+function HeroScene() {
+  const back = useRef<THREE.Group>(null);
+  const mid = useRef<THREE.Group>(null);
+  const front = useRef<THREE.Group>(null);
+  const root = useRef<THREE.Group>(null);
+  const bird = useRef<THREE.Group>(null);
+  const size = useThree((s) => s.size);
+  // Highest the top of the head may sit (world y, before the root scale) without covering
+  // the "See my work" button. Short phone screens (Safari with its toolbars) need it.
+  const headCeiling = useRef<number | null>(null);
+
+  useEffect(() => {
+    const measure = () => {
+      const hero = document.getElementById("top");
+      const cta = hero?.querySelector<HTMLElement>('a[href="#work"]');
+      if (!hero || !cta) return;
+      // offsetTop, not getBoundingClientRect: the button rises in on load, and the
+      // transform would put it higher than where it comes to rest.
+      let bottom = cta.offsetHeight;
+      for (let el: HTMLElement | null = cta; el && el !== hero; el = el.offsetParent as HTMLElement | null) {
+        bottom += el.offsetTop;
+      }
+      const halfHeight = 9 * Math.tan(Math.PI / 12); // camera 9, fov 30, at the portrait's depth
+      headCeiling.current = halfHeight * (1 - (2 * (bottom + 16)) / hero.offsetHeight);
+    };
+    measure();
+    // Re-measure whenever the hero copy reflows: web fonts swapping in push the button down.
+    const copy = document.querySelector('#top a[href="#work"]')?.parentElement?.parentElement;
+    const observer = new ResizeObserver(measure);
+    if (copy) observer.observe(copy);
+    document.fonts?.ready.then(measure);
+    window.addEventListener("resize", measure);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, []);
+
+  useFrame((state, delta) => {
+    const dt = Math.min(delta, 1 / 30);
+    const time = state.clock.elapsedTime;
+    const rootScale = Math.min(1, (size.width / size.height) * 0.9 + 0.2);
+    // The hero leaves over one viewport of scroll.
+    const out = motion.reduced ? 0 : clamp01(window.scrollY / window.innerHeight);
+    const intro = motion.reduced ? 1 : easeOut(clamp01(state.clock.elapsedTime / 1.4));
+    // depth: pointer parallax strength; lift: scroll speed; spread: how far the layer scatters outward
+    const layers: [THREE.Group | null, number, number, number][] = [
+      [back.current, 0.12, -0.7, 0.35],
+      [mid.current, 0.05, 0, 0],
+      [front.current, 0.3, 2.2, 0.8],
+    ];
+    // On phones the portrait sits lower so the photo's bottom edge falls below the fold,
+    // and lower still if the head would otherwise cover the button.
+    let portraitY = size.width / size.height < 0.8 ? -0.75 : 0;
+    if (headCeiling.current !== null) portraitY = Math.min(portraitY, headCeiling.current / rootScale - HEAD_TOP);
+    for (const [g, depth, lift, spread] of layers) {
+      if (!g) continue;
+      const px = motion.reduced ? 0 : pointer.sx * depth;
+      const py = motion.reduced ? 0 : pointer.sy * depth * 0.6;
+      const base = g === mid.current ? portraitY : 0;
+      g.position.x = damp(g.position.x, px, dt);
+      g.position.y = damp(g.position.y, base + py + out * lift - (1 - intro) * lift * 0.4, dt, 8);
+      const s = 1 + out * spread;
+      g.scale.set(damp(g.scale.x, s, dt, 8), damp(g.scale.y, s, dt, 8), 1);
+    }
+    if (mid.current && !motion.reduced) mid.current.rotation.y = damp(mid.current.rotation.y, pointer.sx * 0.08, dt);
+
+    // Now and then a bird crosses the sky behind the portrait, right to left.
+    const b = bird.current;
+    if (b) {
+      const cycle = motion.reduced ? 0.99 : time < 4 ? 0.99 : ((time - 4) % 18) / 18;
+      const fly = clamp01(cycle / 0.55);
+      b.position.set(lerp(6, -6, fly), lerp(1.3, 1.9, fly) + Math.sin(time * 1.7) * 0.08, -5);
+      b.rotation.set(0.2, -Math.PI / 2 + 0.3, Math.sin(time * 1.1) * 0.15);
+      b.visible = cycle < 0.56;
+    }
+    // The debris leans in toward the camera as the visitor leaves; the portrait holds its
+    // size so its faded bottom never crosses the edge of the hero's 3D box.
+    if (root.current) root.current.scale.setScalar(rootScale);
+    for (const g of [back.current, front.current]) if (g) g.position.z = damp(g.position.z, out * 1.6, dt, 8);
+  });
+
+  // A slab of mossy concrete on one side and a rusted gear on the other, a loop of ivy
+  // round the portrait, and spores (pollen by day) drifting through it all.
+  return (
+    <group ref={root}>
+      <group ref={back}>
+        <Rock seed={3} position={[-3.6, -0.55, -2.4]} scale={0.66} moss={0.7} sprig delay={0.35} />
+        <Gear position={[3.7, -0.2, -2.8]} scale={0.68} delay={0.5} />
+      </group>
+      <group ref={mid}>
+        <Suspense fallback={null}>
+          <Portrait />
+        </Suspense>
+        <VineRing radius={1.9} position={[0, -0.3, 0]} tilt={[1.3, 0.06, 0.3]} speed={0.35} />
+      </group>
+      <Spores count={90} area={[12, 7, 5]} position={[0, 0, -1.5]} />
+      <group ref={bird} scale={0.32}>
+        <Bird />
+      </group>
+      <group ref={front}>
+        {/* covers the photo's own crop on the right arm */}
+        <Rock seed={5} position={[1.65, -2.6, 1.2]} scale={0.5} moss={0.9} sprig delay={0.55} />
+      </group>
+    </group>
+  );
+}
+
+/* ------------------------------------------------------ featured (peak) */
+
+/**
+ * The pinned RoboStars showcase, one timeline driven by scroll:
+ *   0.00-0.18  the tablet swings from edge-on to face the visitor
+ *   0.18-0.85  its screen scrolls the real robostarslb.com top to bottom
+ *   0.30-0.55  the scrap robot walks in from the right
+ *   0.55-1.00  the robot waves; the tablet settles toward the camera
+ */
+function FeaturedScene({ spot, screen }: { spot: RefObject<HTMLElement | null>; screen: string }) {
+  const tablet = useRef<THREE.Group>(null);
+  const robot = useRef<THREE.Group>(null);
+  const orbit = useRef<THREE.Group>(null);
+  const drive = useRef<RobotDrive>({ walking: 0, waving: 0 });
+  const progress = useRef(0);
+
+  useFrame((state, delta) => {
+    const dt = Math.min(delta, 1 / 30);
+    const section = spot.current?.closest("[data-progress]") ?? null;
+    const target = motion.reduced ? 0.6 : sectionProgress(section);
+    // Smooth the timeline itself so wheel steps glide.
+    progress.current = damp(progress.current, target, dt, 7);
+    const p = progress.current;
+    const t = motion.reduced ? 0 : state.clock.elapsedTime;
+
+    // The view bleeds past its grid column (right and down) so props are never sliced
+    // mid-page. Re-frame so the composition keeps the scale and centre it has on the column:
+    // widen the vertical FOV for the extra height, and shift the camera by half each bleed.
+    const el = spot.current;
+    const col = el?.parentElement;
+    const cam = state.camera as THREE.PerspectiveCamera;
+    if (el && col && cam.isPerspectiveCamera) {
+      const a = el.getBoundingClientRect();
+      const b = col.getBoundingClientRect();
+      const half = Math.tan(THREE.MathUtils.degToRad(15)); // base fov 30 over the column height
+      const fov = THREE.MathUtils.radToDeg(2 * Math.atan((half * a.height) / Math.max(1, b.height)));
+      if (Math.abs(cam.fov - fov) > 0.01) {
+        cam.fov = fov;
+        cam.updateProjectionMatrix();
+      }
+      const worldPerPx = (2 * 8 * half) / Math.max(1, b.height);
+      cam.position.x = ((a.right - b.right - (b.left - a.left)) / 2) * worldPerPx;
+      cam.position.y = -((a.bottom - b.bottom - (b.top - a.top)) / 2) * worldPerPx;
+    }
+
+    const turn = easeOut(span(p, 0, 0.18));
+    const settle = easeInOut(span(p, 0.85, 1));
+    const g = tablet.current;
+    if (g) {
+      g.rotation.y = lerp(-1.45, -0.32, turn) + settle * 0.2 + pointer.sx * 0.12;
+      g.rotation.x = -0.08 - pointer.sy * 0.06;
+      g.position.set(lerp(-0.7, -0.45, turn), lerp(-1.3, 0.35, turn) + Math.sin(t * 0.9) * 0.05, settle * 0.6);
+      g.scale.setScalar(lerp(0.7, 0.86, turn));
+    }
+
+    const walk = span(p, 0.3, 0.55);
+    drive.current.walking = walk > 0 && walk < 1 ? 1 : 0;
+    drive.current.waving = easeOut(span(p, 0.55, 0.65));
+    const r = robot.current;
+    if (r) {
+      r.position.x = lerp(7.5, 1.15, walk);
+      r.rotation.y = walk < 1 ? -1.2 : damp(r.rotation.y, -0.45, dt, 4);
+    }
+    if (orbit.current) orbit.current.scale.setScalar(Math.max(0.001, easeOut(span(p, 0.08, 0.3))));
+  });
+
+  const scroll = () => easeInOut(span(progress.current, 0.18, 0.85));
+
+  return (
+    <>
+      {/* The client's logo assembles itself as the tablet swings round, then floats top-left. */}
+      <LogoBadge assemble={() => span(progress.current, 0.03, 0.24)} position={[1.3, 0.85, 0.9]} scale={1.05} />
+      <Rock seed={7} position={[2.3, 0.4, -2.4]} scale={0.8} moss={0.6} />
+      <Rock seed={8} position={[-1.7, -1.5, 0.4]} scale={0.36} moss={0.8} sprig />
+      <Spores count={40} area={[8, 5, 3]} position={[0, 0, -0.5]} size={0.07} />
+      <group ref={tablet}>
+        <Suspense fallback={null}>
+          <Tablet src={screen} scroll={scroll} />
+        </Suspense>
+      </group>
+      <group ref={orbit}>
+        <VineRing radius={2.35} position={[-0.3, 0.25, 0]} tilt={[1.35, 0, -0.25]} speed={0.2} phase={2} />
+      </group>
+      <group ref={robot} position={[7.5, -1.85, 1]} rotation-y={-1.2} scale={0.56}>
+        <Robot drive={drive} />
+      </group>
+    </>
+  );
+}
+
+/* --------------------------------------------------------------- devices */
+
+/**
+ * Where a work card is on its own timeline. On desktop the cards ride a sideways
+ * rail, so their horizontal position drives entry and screen scroll; phones use
+ * ordinary vertical scroll. The screen sits at the top of the site while its card
+ * arrives and reaches the bottom as the card leaves, so nobody lands mid-page.
+ */
+function cardTimeline(card: Element | null, box: Element | null) {
+  if (!card) return { enter: 0, scroll: 0 };
+  const r = card.getBoundingClientRect();
+  const vw = window.innerWidth, vh = window.innerHeight;
+  const vertical = clamp01((vh - r.top) / (r.height * 0.6));
+  if (pinsActive()) {
+    const horizontal = clamp01((vw - r.left) / (r.width * 0.7));
+    const rail = card.closest<HTMLElement>('[data-rail]');
+    const frame = rail?.parentElement;
+    if (!rail || !frame)
+      return { enter: Math.min(vertical, horizontal), scroll: 0 };
+    // The card's right edge before the rail moved, and where the rail's full travel leaves it.
+    const rest =
+      r.right -
+      (rail.getBoundingClientRect().left - frame.getBoundingClientRect().left);
+    const travel = Math.max(0, rail.scrollWidth - rail.clientWidth);
+    // Top once the card is fully in view (or from the start, if it begins in view);
+    // bottom once it reaches the left edge or the rail runs out.
+    const start = Math.min(vw, rest);
+    const end = Math.max(r.width, rest - travel);
+    const scroll =
+      start - end > 1 ? clamp01((start - r.right) / (start - end)) : 0;
+    return { enter: Math.min(vertical, horizontal), scroll };
+  }
+  // Phones: cards are nearly a screen tall, so time it off the device box: top once the
+  // whole box is on screen, bottom as it slides under the header.
+  const b = (box ?? card).getBoundingClientRect();
+  const start = Math.max(vh - b.height, vh * 0.35);
+  const end = 80;
+  return { enter: vertical, scroll: clamp01((start - b.top) / (start - end)) };
+}
+
+/** Rough width x height of each device arrangement at scale 1, for framing. */
+const FOOTPRINT = { tablet: [2.9, 2.0], phones: [3.05, 2.1], phonesTall: [2.5, 2.85], laptop: [3.4, 3.0] } as const;
+
+function DeviceScene({ project, spot }: { project: Project; spot: RefObject<HTMLElement | null> }) {
+  const rig = useRef<THREE.Group>(null);
+  const screenScroll = useRef(0);
+  const reevu = useReevuScreen();
+  const size = useThree((s) => s.size);
+  // Tall panes (the split feature cards) stack the phone in front of the tablet instead of beside it.
+  const tall = size.width / size.height < 0.9;
+
+  useFrame((state, delta) => {
+    const g = rig.current;
+    if (!g) return;
+    const dt = Math.min(delta, 1 / 30);
+    // Hover and entry follow the whole card, not just the 3D box.
+    const card = spot.current?.closest("article") ?? null;
+    const hover = !motion.reduced && !!card?.matches(":hover");
+    const { enter, scroll } = motion.reduced ? { enter: 1, scroll: 0.3 } : cardTimeline(card, spot.current);
+    screenScroll.current = damp(screenScroll.current, scroll, dt, 6);
+    const e = easeOut(enter);
+    const t = motion.reduced ? 0 : state.clock.elapsedTime;
+    // Devices spin in once as they arrive, then idle-sway; hover hands control to the cursor.
+    g.rotation.y = damp(g.rotation.y, (hover ? pointer.sx * 0.3 : Math.sin(t * 0.4) * 0.08) - (1 - e) * 2.4, dt, 6);
+    g.rotation.x = damp(g.rotation.x, hover ? -pointer.sy * 0.15 : 0, dt);
+    g.position.y = damp(g.position.y, (hover ? 0.18 : 0) - (1 - e) * 1.2, dt);
+    // Frame the device to fill the pane (camera 7, fov 30) without touching its edges.
+    const visH = 2 * 7 * Math.tan((15 * Math.PI) / 180);
+    const visW = visH * (state.size.width / state.size.height);
+    const [fw, fh] = FOOTPRINT[project.device === "phones" && tall ? "phonesTall" : project.device];
+    const fit = Math.min(1.1, (0.86 * visW) / fw, (0.8 * visH) / fh);
+    g.scale.setScalar(damp(g.scale.x, (hover ? 1.06 : 1) * lerp(0.6, 1, e) * fit, dt));
+  });
+
+  const scroll = () => screenScroll.current;
+  return (
+    <>
+      <Rock seed={project.id.length * 3} position={[1.6, 1, -2.6]} scale={0.5} moss={0.6} />
+      <Rock seed={project.id.length * 3 + 1} position={[-1.9, -0.9, -1.6]} scale={0.2} moss={0.9} />
+      <group ref={rig}>
+        <Suspense fallback={null}>
+          {project.device === "phones" && (
+            <>
+              {project.backScreen && (
+                <Tablet
+                  src={project.backScreen}
+                  scroll={scroll}
+                  position={tall ? [-0.25, 0.5, -0.8] : [-0.55, 0.25, -0.8]}
+                  rotation-y={0.35}
+                  scale={0.75}
+                />
+              )}
+              <Phone
+                src={project.screen}
+                scroll={scroll}
+                position={tall ? [0.55, -0.45, 0.4] : [0.8, -0.1, 0.4]}
+                rotation-y={-0.3}
+                scale={0.95}
+              />
+            </>
+          )}
+          {project.device === "laptop" && (
+            <Laptop src={project.screen} scroll={scroll} position={[0, -1.0, -0.6]} rotation={[0.32, -0.45, 0]} scale={0.95} />
+          )}
+          {project.device === "tablet" && (
+            <Tablet
+              src={project.screen === "reevu" ? undefined : project.screen}
+              texture={project.screen === "reevu" ? reevu : undefined}
+              scroll={scroll}
+              rotation={[-0.05, -0.3, 0.04]}
+              scale={0.9}
+            />
+          )}
+        </Suspense>
+      </group>
+    </>
+  );
+}
+
+/* --------------------------------------------------------------- closing */
+
+/** Loose stones and bits of scrap that gather round the island. */
+const DEBRIS = [
+  { seed: 21, size: 0.22, from: [-6, 3, -2] },
+  { seed: 22, size: 0.16, from: [6, 2.5, 1] },
+  { seed: 23, size: 0.14, from: [-5, -3, 2] },
+  { seed: 24, size: 0.2, from: [5.5, -2.5, -1] },
+  { seed: 25, size: 0.12, from: [0, 4.5, 0] },
+  { seed: 26, size: 0.15, from: [-6.5, 0, 1] },
+  { seed: 27, size: 0.18, from: [6.5, 0.5, -2] },
+] as const;
+
+/** What the closing robot does when clicked; `n` changes on every poke so the scene notices. */
+type Poke = { n: number; kind: "hop" | "spin" | "sleep" | "wake" };
+
+/**
+ * The resolve: loose stones fly in from off-screen and settle into a slow drift round a
+ * floating island of mossy concrete with a sapling on it, and the scrap robot walks in on
+ * the right to wave the visitor off. Clicking the robot is an easter egg.
+ */
+function ClosingScene({
+  spot,
+  pokeRef,
+  onPoke,
+  bubbleRef,
+}: {
+  spot: RefObject<HTMLElement | null>;
+  pokeRef: RefObject<Poke>;
+  onPoke: () => void;
+  bubbleRef: RefObject<HTMLDivElement | null>;
+}) {
+  const planet = useRef<THREE.Group>(null);
+  const moons = useRef<(THREE.Group | null)[]>([]);
+  const gather = useRef(0);
+  const robot = useRef<THREE.Group>(null);
+  const robotDrive = useRef<RobotDrive>({
+    walking: 0,
+    waving: 0,
+    lookX: 0,
+    lookY: 0,
+    sleep: 0,
+  });
+  // The click reaction plays on an inner group, so it never fights the walk-in.
+  const hop = useRef<THREE.Group>(null);
+  const reaction = useRef({
+    seen: 0,
+    kind: 'hop' as Poke['kind'],
+    start: -10,
+    asleep: false,
+  });
+  const head = useMemo(() => new THREE.Vector3(), []);
+
+  useFrame((state, delta) => {
+    const dt = Math.min(delta, 1 / 30);
+    // Half the visible width at the planet's depth: keeps the robot on narrow screens.
+    const halfW =
+      9 *
+      Math.tan((15 * Math.PI) / 180) *
+      (state.size.width / state.size.height);
+    const section = spot.current?.closest('section') ?? null;
+    let target = 1;
+    if (!motion.reduced && section) {
+      const r = section.getBoundingClientRect();
+      target = clamp01((window.innerHeight - r.top) / (r.height * 0.85));
+    }
+    gather.current = damp(gather.current, target, dt, 4);
+    const g = easeInOut(gather.current);
+    const t = motion.reduced ? 0 : state.clock.elapsedTime;
+    if (planet.current) {
+      planet.current.rotation.y = t * 0.15;
+      planet.current.position.x = damp(
+        planet.current.position.x,
+        motion.reduced ? 0 : pointer.sx * 0.2,
+        dt,
+      );
+    }
+    // Walks in once the planet has mostly gathered, turns to the visitor and waves.
+    const r = robot.current;
+    if (r) {
+      const walk = motion.reduced ? 1 : clamp01((gather.current - 0.45) / 0.45);
+      const d = robotDrive.current;
+      const re = reaction.current;
+      if (pokeRef.current.n !== re.seen) {
+        re.seen = pokeRef.current.n;
+        re.kind = pokeRef.current.kind;
+        re.start = state.clock.elapsedTime;
+        if (re.kind === 'sleep') re.asleep = true;
+        if (re.kind === 'wake') re.asleep = false;
+      }
+      d.walking = walk > 0 && walk < 1 ? 1 : 0;
+      d.waving = damp(d.waving, walk >= 1 && !re.asleep ? 1 : 0, dt, 4);
+      d.sleep = damp(d.sleep ?? 0, re.asleep ? 1 : 0, dt, 3);
+      d.lookX = pointer.sx * 0.6;
+      d.lookY = pointer.sy * 0.4;
+      r.position.x = lerp(
+        halfW + 1.5,
+        // 1.3 in from the edge leaves room for the waving arm on narrow screens.
+        Math.min(3.1, halfW - 1.3),
+        easeOut(walk),
+      );
+      r.rotation.y = walk < 1 ? -1.2 : damp(r.rotation.y, -0.4, dt, 4);
+
+      // Hop on a click; the fifth click is a full spin; waking up is a startled hop.
+      const h = hop.current;
+      if (h) {
+        const u =
+          (state.clock.elapsedTime - re.start) /
+          (re.kind === 'spin' ? 0.9 : 0.45);
+        const active =
+          !motion.reduced && u >= 0 && u < 1 && re.kind !== 'sleep';
+        h.position.y = active
+          ? Math.sin(Math.PI * u) * (re.kind === 'spin' ? 0.9 : 0.5)
+          : 0;
+        h.rotation.y =
+          active && re.kind === 'spin' ? easeInOut(u) * Math.PI * 2 : 0;
+
+        // Pin the speech bubble just above the robot's head.
+        const b = bubbleRef.current;
+        const box = spot.current?.getBoundingClientRect();
+        if (b && box) {
+          h.localToWorld(head.set(0, 3.1, 0)).project(state.camera);
+          b.style.transform = `translate(${((head.x + 1) / 2) * box.width}px, ${((1 - head.y) / 2) * box.height}px)`;
+        }
+      }
+    }
+    DEBRIS.forEach((m, i) => {
+      const moon = moons.current[i];
+      if (!moon) return;
+      const a = (i / DEBRIS.length) * Math.PI * 2 + t * 0.35 * g;
+      const radius = 2.1 + (i % 3) * 0.3;
+      // A tilted orbital plane, like the chrome rings.
+      const ox = Math.cos(a) * radius,
+        oz = Math.sin(a) * radius;
+      const oy = oz * 0.28;
+      moon.position.set(
+        lerp(m.from[0], ox, g),
+        lerp(m.from[1], oy, g),
+        lerp(m.from[2], oz * 0.6, g),
+      );
+      moon.scale.setScalar(
+        Math.max(0.001, easeOut(clamp01(gather.current * 1.4))),
+      );
+    });
+  });
+
+  return (
+    <>
+      <group ref={planet}>
+        <Rock seed={11} position={[0, 0, 0]} scale={1.05} moss={0.8} speed={0.5} />
+        <Sprig position={[0.15, 0.5, 0.1]} length={1.5} leaves={7} />
+        <Sprig position={[-0.45, 0.4, 0.3]} rotation-z={0.4} length={0.8} leaves={4} color={palette.lichen} />
+        <VineRing radius={1.85} tilt={[1.3, 0, 0.25]} speed={0.3} />
+      </group>
+      <group
+        ref={robot}
+        position={[8, -1.5, 0.6]}
+        rotation-y={-1.2}
+        scale={0.5}>
+        <group
+          ref={hop}
+          onClick={(e) => {
+            e.stopPropagation();
+            onPoke();
+          }}
+          onPointerOver={() => void (document.body.style.cursor = 'pointer')}
+          onPointerOut={() => void (document.body.style.cursor = '')}>
+          <Robot drive={robotDrive} />
+        </group>
+      </group>
+      {DEBRIS.map((m, i) => (
+        <group key={m.seed} ref={(el) => void (moons.current[i] = el)}>
+          <Rock seed={m.seed} position={[0, 0, 0]} scale={m.size} moss={0.5} />
+        </group>
+      ))}
+      <Spores count={60} area={[12, 6, 4]} size={0.08} />
+    </>
+  );
+}
+
+/* ------------------------------------------------------ build-a-robot game */
+
+export type BuilderCommand = { type: "scatter" | "build"; n: number };
+
+const SNAP = 0.2; // how close (badge units) a piece must land to click into place
+/** Logo scale on the board. The victory pop multiplies this, so it must never be reset to 1. */
+const BOARD = 2.2;
+
+/**
+ * The RoboStars logo in pieces on a table. Drag each piece onto its outline; within
+ * SNAP it clicks home. All six placed: a victory spin and a sparkle burst.
+ */
+function BuilderScene({
+  command,
+  interactive,
+  onProgress,
+}: {
+  command: BuilderCommand;
+  interactive: boolean;
+  onProgress: (placed: number) => void;
+}) {
+  const parts = useMemo(() => logoParts(), []);
+  const board = useRef<THREE.Group>(null);
+  const meshes = useRef<(THREE.Mesh | null)[]>([]);
+  const ghosts = useRef<(THREE.Mesh | null)[]>([]);
+  const sparkles = useRef<THREE.Group>(null);
+  // How far the ivy has grown over the finished sign (0..1), and the eyes that light up.
+  const bloom = useRef(0);
+  const eyeLights = useRef<(THREE.MeshStandardMaterial | null)[]>([]);
+  const size = useThree((s) => s.size);
+  const game = useRef({
+    pos: parts.map(() => new THREE.Vector3()),
+    rot: parts.map(() => 0),
+    placed: parts.map(() => false),
+    dragging: -1,
+    grab: new THREE.Vector3(),
+    won: -10,
+    reported: -1,
+    touched: 0,
+    /** Where each piece is actually drawn (includes the idle-hint nudge). */
+    vis: parts.map(() => new THREE.Vector3()),
+  });
+  const scratch = useMemo(() => ({ plane: new THREE.Plane(new THREE.Vector3(0, 0, 1), 0), hit: new THREE.Vector3() }), []);
+
+  // Each piece's own centre and rough radius. Pieces are drawn in logo coordinates and
+  // turn about the logo's origin, so scattering has to aim the centre, not the origin.
+  const extents = useMemo(
+    () =>
+      parts.map((part) => {
+        part.geo.computeBoundingBox();
+        const box = part.geo.boundingBox!;
+        const centre = box.getCenter(new THREE.Vector3()).setZ(0);
+        const size = box.getSize(new THREE.Vector3());
+        return { centre, radius: Math.hypot(size.x, size.y) / 2 };
+      }),
+    [parts],
+  );
+
+  // Scatter either side of the outline, inside the box, clear of the progress label top-left.
+  const scatter = () => {
+    const g = game.current;
+    // Half the visible area in board units (camera at 5, fov 30).
+    const halfY = (5 * Math.tan(THREE.MathUtils.degToRad(15))) / BOARD;
+    const halfX = (halfY * size.width) / size.height;
+    // antenna, head, left arm, right arm, star, point: alternate sides, spread top to bottom.
+    const rows = [0.12, 0.3, -0.02, 0.05, -0.3, -0.28];
+    parts.forEach((_, i) => {
+      const side = i % 2 === 0 ? -1 : 1;
+      const { centre, radius } = extents[i];
+      const room = Math.max(0, halfX - radius * 0.85 - 0.45);
+      // Narrow boxes (phones): stay inside the box even if that means overlapping the outline.
+      const x = Math.min(0.45 + Math.random() * room, halfX - radius * 1.15);
+      const target = new THREE.Vector3(side * x, rows[i] + (Math.random() - 0.5) * 0.08, 0);
+      target.y = THREE.MathUtils.clamp(target.y, -halfY + radius * 0.8, halfY - radius * 0.8);
+      g.rot[i] = (Math.random() - 0.5) * 1.2;
+      // pos = target - (centre turned by the piece's rotation)
+      g.pos[i].copy(target).sub(centre.clone().applyAxisAngle(new THREE.Vector3(0, 0, 1), g.rot[i]));
+      g.placed[i] = false;
+    });
+    g.won = -10;
+  };
+
+  useEffect(() => {
+    const g = game.current;
+    if (command.type === "build") g.placed = g.placed.map(() => true);
+    else scatter();
+    // `scatter` reads layout at call time; re-running on resize would reshuffle a game in progress.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [command.n]);
+
+  useFrame((state, delta) => {
+    const g = game.current;
+    const dt = Math.min(delta, 1 / 30);
+    const t = state.clock.elapsedTime;
+    parts.forEach((_, i) => {
+      const m = meshes.current[i];
+      if (!m) return;
+      if (g.placed[i]) {
+        // Glide home and square up.
+        const k = motion.reduced ? 1 : 1 - Math.exp(-dt * 12);
+        g.pos[i].lerp(new THREE.Vector3(), k);
+        g.rot[i] += (0 - g.rot[i]) * k;
+      }
+      const floating = !g.placed[i] && g.dragging !== i && !motion.reduced;
+      // Idle hint: after a few quiet seconds, the first loose piece drifts part-way toward
+      // its slot and back, showing what to do without a word.
+      const hinting = floating && i === g.placed.indexOf(false) && performance.now() - g.touched > 3500;
+      const nudge = hinting ? 0.35 * (0.5 - 0.5 * Math.cos(t * 2.4)) : 0;
+      m.position.set(
+        g.pos[i].x * (1 - nudge),
+        g.pos[i].y * (1 - nudge) + (floating ? Math.sin(t * 1.5 + i) * 0.02 : 0),
+        g.dragging === i ? 0.25 : 0,
+      );
+      g.vis[i].set(m.position.x, m.position.y, 0);
+      // The outline under a piece goes once the piece is home, so it never shows through
+      // the gaps (or the eyes) of the finished logo.
+      const ghost = ghosts.current[i];
+      if (ghost) ghost.visible = !g.placed[i] || g.pos[i].length() > 0.01;
+      m.rotation.set(0, 0, g.rot[i]);
+      const lift = g.dragging === i ? 1.08 : 1;
+      m.scale.setScalar(damp(m.scale.x, lift, dt, 12));
+    });
+
+    // Dev-only: where each piece and its home are on screen (NDC), for the drag test harness.
+    if (process.env.NODE_ENV !== "production" && board.current) {
+      const cam = state.camera;
+      const ndc = (v: THREE.Vector3) => board.current!.localToWorld(v.clone()).project(cam);
+      // A point guaranteed to be on each piece (centroid of its first front-face triangle),
+      // turned by the piece's current rotation. Grab there, drop at the same point minus
+      // the piece's offset, and the piece lands home: what a person does by eye.
+      const onPiece = (i: number) => {
+        const a = parts[i].geo.attributes.position;
+        const c = new THREE.Vector3(
+          (a.getX(0) + a.getX(1) + a.getX(2)) / 3,
+          (a.getY(0) + a.getY(1) + a.getY(2)) / 3,
+          0,
+        );
+        return c.applyAxisAngle(new THREE.Vector3(0, 0, 1), g.rot[i]);
+      };
+      (window as unknown as { __builder: unknown }).__builder = {
+        pieces: g.vis.map((p, i) => ndc(p.clone().add(onPiece(i)))),
+        homes: parts.map((_, i) => ndc(onPiece(i))),
+        placed: [...g.placed],
+      };
+    }
+
+    const placed = g.placed.filter(Boolean).length;
+    if (placed !== g.reported) {
+      g.reported = placed;
+      if (placed === parts.length && g.won < 0) g.won = t;
+      onProgress(placed);
+    }
+
+    // Victory: one full spin with a pop and a burst of leaves; then ivy creeps over the
+    // sign and its eyes light up, as if it had been standing here for years.
+    const since = g.won < 0 ? -1 : t - g.won;
+    if (board.current) {
+      const k = since < 0 || motion.reduced ? 0 : clamp01(since / 1.4);
+      board.current.rotation.y = easeInOut(k) * Math.PI * 2;
+      board.current.scale.setScalar(BOARD * (1 + Math.sin(Math.PI * k) * 0.12));
+    }
+    bloom.current = since < 0 ? 0 : motion.reduced ? 1 : clamp01((since - 0.8) / 2.2);
+    eyeLights.current.forEach((m) => {
+      if (m) m.emissiveIntensity = 0.08 + bloom.current * (1.6 + Math.sin(t * 2) * 0.2);
+    });
+    if (sparkles.current) {
+      const k = since < 0 ? 1 : clamp01(since / 1.8);
+      sparkles.current.visible = since >= 0 && k < 1 && !motion.reduced;
+      sparkles.current.children.forEach((c, i) => {
+        const a = (i / sparkles.current!.children.length) * Math.PI * 2;
+        const r = easeOut(k) * 1.4;
+        // Leaves spiral out and tumble down a little as they go.
+        c.position.set(Math.cos(a) * r, Math.sin(a) * r - k * k * 0.4, 0.3);
+        c.rotation.set(k * 6 + i, k * 4, a);
+        c.scale.setScalar((1 - k * 0.7) * 0.09);
+      });
+    }
+  });
+
+  // Dragging happens on the z = 0 plane of the board.
+  const toBoard = (e: ThreeEvent<PointerEvent>) => {
+    if (!e.ray.intersectPlane(scratch.plane, scratch.hit) || !board.current) return null;
+    return board.current.worldToLocal(scratch.hit.clone());
+  };
+
+  const onDown = (i: number) => (e: ThreeEvent<PointerEvent>) => {
+    const g = game.current;
+    if (!interactive || g.placed[i] || g.dragging !== -1) return;
+    e.stopPropagation();
+    const p = toBoard(e);
+    if (!p) return;
+    g.dragging = i;
+    g.touched = performance.now();
+    // Start from where the piece is drawn, so grabbing it mid-hint doesn't make it jump.
+    g.pos[i].copy(g.vis[i]);
+    g.grab.copy(p).sub(g.pos[i]);
+    (e.target as Element).setPointerCapture?.(e.pointerId);
+    document.body.style.cursor = "grabbing";
+  };
+  const onMove = (i: number) => (e: ThreeEvent<PointerEvent>) => {
+    const g = game.current;
+    if (g.dragging !== i) return;
+    const p = toBoard(e);
+    if (p) g.pos[i].copy(p.sub(g.grab)).setZ(0);
+  };
+  const onUp = (i: number) => (e: ThreeEvent<PointerEvent>) => {
+    const g = game.current;
+    if (g.dragging !== i) return;
+    g.dragging = -1;
+    (e.target as Element).releasePointerCapture?.(e.pointerId);
+    document.body.style.cursor = "";
+    if (g.pos[i].length() < SNAP) g.placed[i] = true;
+  };
+
+  return (
+    <group ref={board} scale={BOARD}>
+      {/* the outline to build onto */}
+      {parts.map((part, i) => (
+        <mesh
+          key={`ghost-${i}`}
+          ref={(m) => void (ghosts.current[i] = m)}
+          geometry={part.flat}
+          position={[0, 0, -0.12]}
+        >
+          {/* Writes depth and draws only where nothing is yet, so overlapping shapes
+              (the antenna's ball and stick) stay one even layer. */}
+          <meshBasicMaterial color={palette.ink} transparent opacity={0.14} depthFunc={THREE.LessDepth} />
+        </mesh>
+      ))}
+      {parts.map((part, i) => (
+        <mesh
+          key={i}
+          ref={(m) => void (meshes.current[i] = m)}
+          geometry={part.geo}
+          onPointerDown={onDown(i)}
+          onPointerMove={onMove(i)}
+          onPointerUp={onUp(i)}
+          onPointerOver={() => {
+            if (!game.current.placed[i] && game.current.dragging === -1) document.body.style.cursor = "grab";
+          }}
+          onPointerOut={() => {
+            if (game.current.dragging === -1) document.body.style.cursor = "";
+          }}
+        >
+          <SignMaterial color={part.color} />
+          {/* White eyes fill the head's sockets, like the printed logo, instead of being
+              holes the background shows through. Set just behind the face so they read as inset. */}
+          {i === 1 &&
+            LOGO_EYES.map((eye, k) => (
+              <mesh key={k} position={[eye.x, eye.y, 0.04]} rotation={[Math.PI / 2, 0, 0]}>
+                <cylinderGeometry args={[LOGO_EYE_R * 0.97, LOGO_EYE_R * 0.97, 0.08, 32]} />
+                {/* a little self-lit, so they stay white under the warm night lights */}
+                <meshStandardMaterial
+                  ref={(m) => void (eyeLights.current[k] = m)}
+                  color={palette.bone}
+                  emissive={palette.gold}
+                  emissiveIntensity={0.08}
+                  roughness={0.5}
+                  toneMapped={false}
+                />
+              </mesh>
+            ))}
+        </mesh>
+      ))}
+      {/* ivy that grows over the sign once it's built: up an arm, over the head, round the point */}
+      <Sprig position={[-0.42, 0.05, 0.06]} rotation-z={-0.5} length={0.32} leaves={4} grow={() => bloom.current} />
+      <Sprig position={[0.28, 0.32, 0.06]} rotation-z={-1.1} length={0.26} leaves={3} grow={() => clamp01(bloom.current * 1.4 - 0.2)} />
+      <Sprig position={[0.02, -0.38, 0.06]} rotation-z={2.7} length={0.28} leaves={4} grow={() => clamp01(bloom.current * 1.3 - 0.3)} />
+      <group ref={sparkles} visible={false}>
+        {Array.from({ length: 16 }, (_, i) => (
+          <mesh key={i} geometry={leafGeometry()}>
+            <meshStandardMaterial color={i % 3 ? palette.moss : palette.lichen} roughness={0.7} side={THREE.DoubleSide} />
+          </mesh>
+        ))}
+      </group>
+    </group>
+  );
+}
+
+/* ----------------------------------------------------------------- spots */
+
+/**
+ * A DOM box the shared canvas renders into (drei View). The box keeps its place
+ * in the layout; the 3D is painted over it by the fixed canvas.
+ */
+function Spot({
+  className,
+  camera = 8,
+  fov = 30,
+  children,
+  spotRef,
+  interactive = false,
+}: {
+  className: string;
+  camera?: number;
+  fov?: number;
+  children: React.ReactNode;
+  spotRef?: RefObject<HTMLDivElement | null>;
+  /** Only for 3D that takes pointer input: drei's View aims events only when the event
+   *  target is its own box, so that box must receive them. */
+  interactive?: boolean;
+}) {
+  return (
+    // Decorative boxes are pointer-events-none: they only tell the shared canvas where to
+    // draw, and clicks and taps must reach the page beneath (the hero CTA sits under one).
+    <div ref={spotRef} className={`${interactive ? "" : "pointer-events-none"} ${className}`} aria-hidden>
+      <View className="absolute inset-0">
+        <PerspectiveCamera makeDefault position={[0, 0, camera]} fov={fov} />
+        <Studio />
+        {children}
+      </View>
+    </div>
+  );
+}
+
+export function HeroSpot({ className }: { className: string }) {
+  return (
+    <Spot className={className} camera={9}>
+      <HeroScene />
+    </Spot>
+  );
+}
+
+export function FeaturedSpot({ className, screen }: { className: string; screen: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+  return (
+    <Spot className={className} spotRef={ref}>
+      <FeaturedScene spot={ref} screen={screen} />
+    </Spot>
+  );
+}
+
+export function DeviceSpot({ className, project }: { className: string; project: Project }) {
+  const ref = useRef<HTMLDivElement>(null);
+  return (
+    <Spot className={className} camera={7} spotRef={ref}>
+      <DeviceScene project={project} spot={ref} />
+    </Spot>
+  );
+}
+
+export function BuilderSpot({
+  className,
+  command,
+  interactive,
+  onProgress,
+}: {
+  className: string;
+  command: BuilderCommand;
+  interactive: boolean;
+  onProgress: (placed: number) => void;
+}) {
+  return (
+    <Spot className={className} camera={5} interactive>
+      <BuilderScene command={command} interactive={interactive} onProgress={onProgress} />
+    </Spot>
+  );
+}
+
+const ROBOT_LINES = [
+  'Beep boop. Hi!',
+  "I'm a robot, not a button.",
+  "Careful, I'm mostly rust.",
+  "Hire Hanna and I'm included.",
+  'Psst: try the build-a-bot game up there.',
+  'Still here. Still waving.',
+  'Mind the plant. It took years.',
+];
+
+export function ClosingSpot({ className }: { className: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const bubble = useRef<HTMLDivElement>(null);
+  const poke = useRef<Poke>({ n: 0, kind: 'hop' });
+  const clicks = useRef(0);
+  const hide = useRef<number>(undefined);
+  const [line, setLine] = useState<string | null>(null);
+
+  useEffect(() => () => window.clearTimeout(hide.current), []);
+
+  const onPoke = () => {
+    const asleep = poke.current.kind === 'sleep';
+    clicks.current = asleep ? 0 : clicks.current + 1;
+    const n = clicks.current;
+    const kind: Poke['kind'] = asleep
+      ? 'wake'
+      : n === 10
+        ? 'sleep'
+        : n === 5
+          ? 'spin'
+          : 'hop';
+    poke.current = { n: poke.current.n + 1, kind };
+    let text: string;
+    if (kind === 'wake') text = "I'm up! I'm up!";
+    else if (kind === 'sleep') text = "That's it. Nap time. Zzz…";
+    else if (kind === 'spin') text = 'Okay, you found the easter egg 🥚';
+    else {
+      const options = ROBOT_LINES.filter((l) => l !== line);
+      text = options[Math.floor(Math.random() * options.length)];
+    }
+    setLine(text);
+    window.clearTimeout(hide.current);
+    // Asleep, the bubble stays up as a snore until the next click.
+    hide.current = window.setTimeout(
+      () => setLine(kind === 'sleep' ? 'Zzz…' : null),
+      2800,
+    );
+  };
+
+  return (
+    // z-[35]: above the shared canvas (z-30) so the bubble isn't hidden behind the planet,
+    // below the fixed header (z-40). overflow-x-clip: before the robot walks in, the bubble's
+    // anchor sits off-screen right and would otherwise widen the page on phones.
+    <div className={`${className} z-[35] overflow-x-clip`}>
+      <Spot className='absolute inset-0' camera={9} spotRef={ref} interactive>
+        <ClosingScene
+          spot={ref}
+          pokeRef={poke}
+          onPoke={onPoke}
+          bubbleRef={bubble}
+        />
+      </Spot>
+      {/* Positioned each frame by the scene; the inner box sits up and to the left of the head. */}
+      <div
+        ref={bubble}
+        aria-hidden
+        className='pointer-events-none absolute left-0 top-0'>
+        {line && (
+          <div key={line} className='robot-bubble'>
+            {line}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

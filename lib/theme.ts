@@ -5,10 +5,11 @@ import { THEME_KEY as KEY } from "./theme-boot";
 
 export type Theme = "light" | "dark";
 /**
- * The look: the sage studio everyone sees ("classic"), or the secret neo-Y2K site ("y2k"),
- * unlocked with the Konami code. Never saved: every visit starts classic.
+ * The look: the sage studio everyone sees ("classic"), or one of the secret ones the
+ * Konami code cycles through: the neo-Y2K site ("y2k") and the overgrown, after-the-end
+ * city ("wasteland"). Never saved: every visit starts classic.
  */
-export type Skin = "classic" | "y2k";
+export type Skin = "classic" | "y2k" | "wasteland";
 /** Inside the neo-Y2K look: the green frutiger meadow, or the aqua and lilac sky. */
 export type Flavor = "green" | "aqua";
 
@@ -57,7 +58,8 @@ export function useTheme(): Theme {
 }
 
 export function getSkin(): Skin {
-  return document.documentElement.dataset.skin === "y2k" ? "y2k" : "classic";
+  const skin = document.documentElement.dataset.skin;
+  return skin === "y2k" || skin === "wasteland" ? skin : "classic";
 }
 
 export function setSkin(skin: Skin) {

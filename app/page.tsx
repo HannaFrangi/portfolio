@@ -34,6 +34,8 @@ import heroSkyAquaDark from "./media/hero-sky-aqua-dark.jpg";
 import heroSkyAquaLight from "./media/hero-sky-aqua-light.jpg";
 import heroSkyDark from "./media/hero-sky-dark.jpg";
 import heroSkyLight from "./media/hero-sky-light.jpg";
+import wastelandSkyDark from "./media/wasteland-sky-dark.jpg";
+import wastelandSkyLight from "./media/wasteland-sky-light.jpg";
 import portrait from "../public/textures/portrait.png";
 
 /** One sentence the whole page should leave behind. */
@@ -182,6 +184,15 @@ function Hero() {
               sizes='100vw'
               className='object-cover object-[50%_62%]'
             />
+          </div>
+          {/* The secret wasteland look: an overgrown street at golden hour, the skyline at dusk. */}
+          <div className='skin-wasteland absolute inset-0'>
+            <div className='sky-light absolute inset-0'>
+              <Image src={wastelandSkyLight} alt='' fill sizes='100vw' className='object-cover object-[50%_70%]' />
+            </div>
+            <div className='sky-dark absolute inset-0'>
+              <Image src={wastelandSkyDark} alt='' fill sizes='100vw' className='object-cover object-[50%_70%]' />
+            </div>
           </div>
           {/* The secret neo-Y2K look: a frutiger sky per flavour and theme. Hidden (and so never
               loaded) until the Konami code unlocks it. */}
@@ -541,6 +552,15 @@ function PaperBackdrop() {
       <div className="paper absolute inset-[-8%]">
         <div className="skin-classic absolute inset-0">
           <Image src={aboutPaper} alt="" fill placeholder="blur" sizes="(min-width: 1152px) 1152px, 100vw" className="object-cover" />
+        </div>
+        {/* wasteland: the same city, out of focus behind the field notes */}
+        <div className="skin-wasteland absolute inset-0">
+          <div className="sky-light absolute inset-0">
+            <Image src={wastelandSkyLight} alt="" fill sizes="(min-width: 1152px) 1152px, 100vw" className="scale-110 object-cover object-[30%_60%] blur-[6px]" />
+          </div>
+          <div className="sky-dark absolute inset-0">
+            <Image src={wastelandSkyDark} alt="" fill sizes="(min-width: 1152px) 1152px, 100vw" className="scale-110 object-cover object-[70%_80%] blur-[4px]" />
+          </div>
         </div>
         {/* neo-Y2K: underwater light, one per theme */}
         <div className="skin-y2k absolute inset-0">
